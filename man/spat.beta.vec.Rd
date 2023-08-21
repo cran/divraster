@@ -25,7 +25,7 @@ comparisons.}
 calling function.}
 }
 \value{
-A SpatRaster with beta results (total, replacement,
+A vector with beta results (total, replacement,
 and richness differences).
 }
 \description{

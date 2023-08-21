@@ -2,8 +2,7 @@
 % Please edit documentation in R/rand.R
 \name{spat.rand}
 \alias{spat.rand}
-\title{Standardize Effect Size (SES) for functional and phylogenetic
-diversity}
+\title{Standardized Effect Size (SES) for raster}
 \usage{
 spat.rand(
   x,
@@ -11,7 +10,7 @@ spat.rand(
   aleats,
   random = c("site", "species", "both", "spat"),
   cores = 1,
-  filename = NULL,
+  filename = "",
   ...
 )
 }
@@ -42,7 +41,7 @@ SpatRaster with Mean, SD, Observed, and SES.
 }
 \description{
 Calculates the standardized effect size for
-functional and phylogenetic diversity.
+functional and phylogenetic alpha diversity.
 See \code{\link[SESraster]{bootspat_str}} and
 \code{\link[SESraster]{bootspat_naive}}
 }
@@ -55,4 +54,5 @@ tree <- ape::read.tree(system.file("extdata", "tree.tre",
 package = "divraster"))
 spat.rand(x, tree, 3, "site")
 spat.rand(x, traits, 3, "site")
+
 }

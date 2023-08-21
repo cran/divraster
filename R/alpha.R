@@ -8,7 +8,8 @@
 #' @param ... Additional arguments to be passed passed down from
 #' a calling function.
 #'
-#' @return A SpatRaster with alpha result.
+#' @return A vector with alpha result.
+#'
 spat.alpha.vec <- function(x, tree, resu, ...) {
   if (all(is.na(x))) {
     resu[] <- NA
@@ -23,8 +24,10 @@ spat.alpha.vec <- function(x, tree, resu, ...) {
 
 #' Alpha calculation for raster
 #'
-#' @description Compute alpha diversity for taxonomic, functional,
-#' and phylogenetic diversity.
+#' @description Calculates alpha diversity for taxonomic (TD),
+#' functional (FD), and phylogenetic (PD) dimensions.
+#' Adapted from \code{\link[BAT]{alpha}}
+#'
 #' @param bin A SpatRaster with presence-absence data (0 or 1) for
 #' a set of species.
 #' @param tree It can be a data frame with species traits or a
@@ -34,6 +37,43 @@ spat.alpha.vec <- function(x, tree, resu, ...) {
 #' @param filename Character. Save results if a name is provided.
 #' @param ... Additional arguments to be passed passed down from a
 #' calling function.
+#'
+#' @details Alpha calculations use a tree-based approach for TD,
+#' FD, and PD (Cardoso et al. 2014). In the FD calculation, a
+#' species traits matrix is transformed into a distance matrix
+#' and clustered to create a regional dendrogram (i.e. a
+#' dendrogram with all species in the raster stack),
+#' from which the total branch length is calculated. When
+#' computing FD for each community (i.e. raster cell), the
+#' regional dendrogram is subsetted to create a local dendrogram
+#' that includes only the species present in the local community.
+#' The branch lengths connecting these species are then summed to
+#' represent the functional relationships of the locally present
+#' species (Petchey and Gaston, 2002, 2006). Similarly, in PD,
+#' the cumulative branch lengths connecting species within a
+#' community indicate their shared phylogenetic relationships
+#' (Faith, 1992). Alpha TD can also be visualized using a tree
+#' diagram, where each species is directly connected to the root
+#' by an edge of unit length, reflecting the number of different
+#' taxa in the community (i.e. species richness) since all taxa
+#' are at the same level (Cardoso et al. 2014).
+#'
+#' @references Cardoso, P. et al. 2014. Partitioning taxon,
+#' phylogenetic and functional beta diversity into replacement
+#' and richness difference components. - Journal of Biogeography
+#' 41: 749–761.
+#'
+#' @references Faith, D. P. 1992. Conservation evaluation and
+#' phylogenetic diversity. - Biological Conservation 61: 1–10.
+#'
+#' @references Petchey, O. L. and Gaston, K. J. 2002.
+#' Functional diversity (FD), species richness and community
+#' composition. - Ecology Letters 5: 402–411.
+#'
+#' @references Rodrigues, A. S. L. and Gaston, K. J. 2002.
+#' Maximising phylogenetic diversity in the selection of
+#' networks of conservation areas. - Biological Conservation
+#' 105: 103–111.
 #'
 #' @return A SpatRaster with alpha result.
 #' @export
@@ -54,49 +94,64 @@ spat.alpha.vec <- function(x, tree, resu, ...) {
 spat.alpha <- function(bin,
                        tree,
                        cores = 1,
-                       filename = NULL, ...) {
+                       filename = "", ...) {
+  # Check if 'bin' is a valid SpatRaster object
   if (is.null(bin) || !inherits(bin, "SpatRaster")) {
     stop("'bin' must be a SpatRaster.")
   }
-  # Check if coordinates are geographic
+  # Check if 'bin' has geographic coordinates
   if (!terra::is.lonlat(bin)) {
-    stop("'bin' must has geographic coordinates.")
+    stop("'bin' must have geographic coordinates.")
   }
+  # Check if 'bin' has at least 2 layers
   if (terra::nlyr(bin) < 2) {
-    stop("'bin' must has at least 2 layers.")
+    stop("'bin' must have at least 2 layers.")
   }
   # Create numeric vector to store result
   resu <- numeric(1)
+
   # Apply the function to SpatRaster object
   if (missing(tree)) {
+    # If 'tree' is missing, apply 'spat.alpha.vec' to 'bin'
+    # without considering any tree
     res <- terra::app(bin,
                       spat.alpha.vec,
                       resu = resu,
                       cores = cores, ...)
   } else {
-    # Check if 'tree' object is valid
+    # Check if 'tree' object is valid (either a data.frame or
+    # a phylo object)
     if (!inherits(tree, c("data.frame", "phylo"))) {
       stop("'tree' must be a data.frame or a phylo object.")
     }
+    # Apply 'spat.alpha.vec' to 'bin' with the provided 'tree'
     res <- terra::app(bin,
                       spat.alpha.vec,
                       resu = resu,
                       cores = cores,
                       tree = tree, ...)
   }
-  # Define names
+
+  # Define names for the output based on the type of 'tree'
+  # If 'tree' is missing, set the output name to "Alpha_TD"
   if (missing(tree)) {
     names(res) <- "Alpha_TD"
-  }
-  else if (inherits(tree, "data.frame")) {
+    # If 'tree' is a data.frame, set the output name to
+    # "Alpha_FD"
+  } else if (inherits(tree, "data.frame")) {
     names(res) <- "Alpha_FD"
-  }
-  else {
+    # If 'tree' is not a data.frame, set the output name to
+    # "Alpha_PD"
+  } else {
     names(res) <- "Alpha_PD"
   }
-  # Save the output if filename is provided
-  if (!is.null(filename)) {
-    terra::writeRaster(res, filename, overwrite = TRUE)
+
+  # Save the output to a file if 'filename' is provided
+  if (filename != "") {
+    terra::writeRaster(res,
+                       filename = filename,
+                       overwrite = TRUE)
   }
+  # Return the SpatRaster with alpha diversity result
   return(res)
 }

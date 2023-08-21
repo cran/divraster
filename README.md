@@ -2,44 +2,48 @@
 # divraster
 
 <!-- badges: start -->
-
+[![CRAN-status](https://www.r-pkg.org/badges/version/divraster)](https://cran.r-project.org/package=divraster)
+[![R-CMD-check](https://github.com/flaviomoc/divraster/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/flaviomoc/divraster/actions/workflows/R-CMD-check.yaml)
+[![](http://cranlogs.r-pkg.org/badges/grand-total/divraster?color=green)](https://cran.r-project.org/package=divraster)
+[![](http://cranlogs.r-pkg.org/badges/divraster?color=green)](https://cran.r-project.org/package=divraster)
 <!-- badges: end -->
 
-divraster calculates diversity patterns from raster data for taxonomic, functional, and phylogenetic dimensions. Spatial and temporal beta diversity can be partitioned into replacement and richness differences components. divraster also calculates standardize effect size for functional and phylogenetic alpha diversity and the average traits.
+Alpha and beta calculations using rasters for taxonomic (TD), functional (FD), and phylogenetic (PD) dimensions. Spatial and temporal beta diversity can be partitioned into replacement and richness difference components. Functions to calculate standardized effect size for functional and phylogenetic alpha diversity and the average traits are available.
 
-## Installation
+### Installation
 
-You can install the development version of divraster from [divraster repository](https://github.com/flaviomoc/divraster) in Github with:
+The CRAN version of `divraster` can be installed using:
 
 ``` r
-require(devtools)
-devtools::load_all()
+install.packages("divraster")
+```
+
+The development version of `divraster` can be installed from Github using:
+
+``` r
 devtools::install_github("flaviomoc/divraster")
 ```
 
-## Example
+### `divraster` basics
 
-This is a demonstration of how to solve a standard example:
+Basic information about `divraster` can be found at the [package's webpage](https://flaviomoc.github.io/divraster/) or in the vignette:
 
 ``` r
-library(divraster)
-## basic example code
-# load data
-data <- load.data()
-# taxonomic alpha
-spat.alpha(data$ref)
-# phylogenetic alpha
-spat.alpha(data$ref, data$tree)
-# standardize effect size for phylogenetic alpha
-spat.rand(data$ref, data$tree, 3, "site") 
-# spatial beta for taxonomic
-spat.beta(data$ref)
-# temporal beta for taxonomic
-temp.beta(data$ref, data$fut)
-# temporal beta for phylogenetic
-temp.beta(data$ref, data$fut, data$tree)
-# temporal beta for functional
-temp.beta(data$ref, data$fut, data$traits)
-# average traits for reference scenario
-spat.trait(data$ref, data$traits)
+vignette("divraster-vignette")
 ```
+
+### Citation
+
+- If you use this R package, please cite in your publications:
+
+Mota FMM, Heming NM, Alves-Ferreira G (2023). divraster: an R package to calculate taxonomic, functional and phylogenetic diversity from rasters. <https://CRAN.R-project.org/package=divraster>.
+
+- For more information:
+
+``` r
+citation("divraster")
+```
+
+### Issues
+
+If you have any question or find any bug, let us know through the topic [Issues](https://github.com/flaviomoc/divraster/issues).

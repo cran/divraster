@@ -19,7 +19,7 @@ phylogenetic tree.}
 a calling function.}
 }
 \value{
-A SpatRaster with alpha result.
+A vector with alpha result.
 }
 \description{
 Alpha calculation for vector
