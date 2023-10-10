@@ -7,8 +7,9 @@
 #'
 #' @param x SpatRaster. A SpatRaster containing presence-absence
 #' data (0 or 1) for a set of species.
-#' @param tree a data.frame with species traits or a phylogenetic
-#' tree.
+#' @param tree It can be a 'data.frame' with species traits or a
+#' 'phylo' with a rooted phylogenetic tree. Species names in 'tree'
+#' and 'x' must match!
 #' @param aleats positive integer. A positive integer indicating
 #' how many times the calculation should be repeated.
 #' @param random character. A character indicating the type of
@@ -24,6 +25,7 @@
 #' @export
 #'
 #' @examples
+#' \donttest{
 #' x <- terra::rast(system.file("extdata", "ref.tif",
 #' package = "divraster"))
 #' traits <- read.csv(system.file("extdata", "traits.csv",
@@ -32,7 +34,7 @@
 #' package = "divraster"))
 #' spat.rand(x, tree, 3, "site")
 #' spat.rand(x, traits, 3, "site")
-#'
+#' }
 spat.rand <- function(x,
                       tree,
                       aleats,
@@ -40,20 +42,8 @@ spat.rand <- function(x,
                       cores = 1,
                       filename = "", ...) {
 
-  # Check if 'x' is NULL or invalid (not SpatRaster)
-  if (is.null(x) || !inherits(x, "SpatRaster")) {
-    stop("'x' must be a SpatRaster.")
-  }
-
-  # Check if coordinates are geographic
-  if (!terra::is.lonlat(x)) {
-    stop("'x' must have geographic coordinates.")
-  }
-
-  # Check if the raster has at least 2 layers
-  if (terra::nlyr(x) < 2) {
-    stop("'x' must have at least 2 layers.")
-  }
+  # Initial tests
+  inputs_chk(bin1 = x, tree = tree)
 
   # Check if the 'random' argument is valid
   if (missing(random) || !(random %in% c("site", "species",
@@ -65,12 +55,6 @@ spat.rand <- function(x,
   # Check if the 'aleats' argument is valid
   if (missing(aleats)) {
     stop("The number of randomizations must be provided.")
-  }
-
-  # Check if the 'tree' object is valid (either a data.frame
-  # or a phylo object)
-  if (!inherits(tree, c("data.frame", "phylo"))) {
-    stop("'tree' must be a data.frame or a phylo object.")
   }
 
   rand <- list()  # to store the rasters in the loop

@@ -13,7 +13,7 @@
 #' calling function.
 #'
 #' @return A vector with beta results (total, replacement,
-#' and richness differences).
+#' richness difference, and ratio).
 #'
 spat.beta.vec <- function(x,
                           tree,
@@ -41,17 +41,17 @@ spat.beta.vec <- function(x,
   # Check if 'x' contains only NA values and return NA values for
   # all beta diversity components
   if (all(is.na(x))) {
-    return(c(Btotal = NA, Brepl = NA, Brich = NA))
+    return(c(Btotal = NA, Brepl = NA, Brich = NA, Bratio = NA))
   }
   # Check if 'x' is not a matrix and return zero values for all beta
   # diversity components
   else if (!inherits(x, "matrix")) {
-    return(c(Btotal = 0, Brepl = 0, Brich = 0))
+    return(c(Btotal = 0, Brepl = 0, Brich = 0, Bratio = 0))
   }
   # Check if 'x' contains all zeros (no presence) and return zero
   # values for all beta diversity components
   else if (sum(x, na.rm = TRUE) == 0) {
-    return(c(Btotal = 0, Brepl = 0, Brich = 0))
+    return(c(Btotal = 0, Brepl = 0, Brich = 0, Bratio = 0))
   }
   # Calculate beta diversity using BAT::beta function and return
   # the result
@@ -65,6 +65,8 @@ spat.beta.vec <- function(x,
                            # Calculate mean of focal against all
                            mean(as.matrix(x)[-1, 1]))
                   }, global)
+    # Calculate beta ratio (Brepl / Btotal) and store it
+    res[4] <- res[2] / res[1] # See Hidasi-Neto et al. (2019)
     return(res)
   }
 }
@@ -73,12 +75,13 @@ spat.beta.vec <- function(x,
 #'
 #' @description Calculates spatial beta diversity for
 #' taxonomic (TD), functional (FD), and phylogenetic (PD)
-#' dimensions. Adapted from \code{\link[BAT]{beta}}
+#' dimensions. Adapted from \code{\link[BAT]{beta}}.
 #'
 #' @param x A SpatRaster with presence-absence data (0 or 1) for a
 #' set of species.
-#' @param tree A data.frame with species traits or a phylogenetic
-#' tree.
+#' @param tree It can be a 'data.frame' with species traits or a
+#' 'phylo' with a rooted phylogenetic tree. Species names in 'tree'
+#' and 'x' must match!
 #' @param filename Character. Save results if a name is provided.
 #' @param global Logical. Mean of pairwise comparisons between
 #' focal cell and its neighbors (default) or mean of all pairwise
@@ -109,8 +112,13 @@ spat.beta.vec <- function(x,
 #' and methodological framework for exploring and explaining
 #' pattern in presence - absence data. - Oikos 120: 1625–1638.
 #'
+#' @references Hidasi-Neto, J. et al. 2019. Climate change will
+#' drive mammal species loss and biotic homogenization in the
+#' Cerrado Biodiversity Hotspot. - Perspectives in Ecology and
+#' Conservation 17: 57–63.
+#'
 #' @return A SpatRaster with beta results (total, replacement,
-#' and richness differences).
+#' richness difference, and ratio).
 #' @export
 #'
 #' @examples
@@ -133,20 +141,8 @@ spat.beta <- function(x, tree, filename = "", global = FALSE,
                       type = "circle",
                       na.policy = "omit", ...) {
 
-  # Check if 'x' is NULL or invalid (not a SpatRaster)
-  if (is.null(x) || !inherits(x, "SpatRaster")) {
-    stop("'x' must be a SpatRaster.")
-  }
-
-  # Check if coordinates are geographic
-  if (!terra::is.lonlat(x)) {
-    stop("'x' must have geographic coordinates.")
-  }
-
-  # Check if 'x' has at least 2 layers
-  if (terra::nlyr(x) < 2) {
-    stop("'x' must have at least 2 layers.")
-  }
+  # Initial tests
+  inputs_chk(bin1 = x, tree = tree)
 
   # Create focal matrix
   if (is.null(fm)) {
@@ -209,11 +205,7 @@ spat.beta <- function(x, tree, filename = "", global = FALSE,
                             nspp = terra::nlyr(x),
                             na.policy = na.policy, ...)
   } else {
-    # Check if 'tree' object is valid (either a data.frame
-    # or a phylo object)
-    if (!inherits(tree, c("data.frame", "phylo"))) {
-      stop("'tree' must be a data.frame or a phylo object.")
-    }
+
     betaR <- terra::focal3D(x,
                             fmA,
                             spat.beta.vec,
@@ -225,7 +217,7 @@ spat.beta <- function(x, tree, filename = "", global = FALSE,
   }
 
   # Define names for the output based on the type of 'tree'
-  lyrnames <- c("Btotal", "Brepl", "Brich")
+  lyrnames <- c("Btotal", "Brepl", "Brich", "Bratio")
   if (missing(tree)) {
     names(betaR) <- paste0(lyrnames, "_TD")
   } else if (inherits(tree, "data.frame")) {

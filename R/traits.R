@@ -17,7 +17,8 @@ spat.trait.vec <- function(x, col_trait, ...) {
 #' @description Compute average for each trait.
 #' @param x A SpatRaster with presence-absence data (0 or 1) for a
 #'  set of species.
-#' @param trait A data.frame with species traits.
+#' @param trait A 'data.frame' with species traits. Rownames must
+#' have species names that match with 'x'!
 #' @param cores A positive integer. If cores > 1, a 'parallel'
 #' package cluster with that many cores is created and used.
 #' @param filename Character. Save results if a name is provided.
@@ -28,27 +29,21 @@ spat.trait.vec <- function(x, col_trait, ...) {
 #' @export
 #'
 #' @examples
+#' \donttest{
 #' library(terra)
 #' bin1 <- terra::rast(system.file("extdata", "ref.tif",
 #' package = "divraster"))
 #' traits <- read.csv(system.file("extdata", "traits.csv",
 #' package = "divraster"), row.names = 1)
 #' spat.trait(bin1, traits)
+#' }
 spat.trait <- function(x,
                        trait,
                        cores = 1,
                        filename = "", ...) {
-  # Check if x is NULL or invalid
-  if (is.null(x) || !inherits(x, "SpatRaster")) {
-    stop("'x' must be a SpatRaster.")
-  }
-  # Check if coordinates are geographic
-  if (!terra::is.lonlat(x)) {
-    stop("'x' must has geographic coordinates.")
-  }
-  if(terra::nlyr(x) < 2) {
-    stop("'x' must has at least 2 layers.")
-  }
+  # Initial tests
+  inputs_chk(bin1 = x, tree = trait)
+
   # Select numeric traits only
   trait <- trait[, sapply(trait, is.numeric)]
   # Create list to store result

@@ -1,3 +1,10 @@
+# divraster 1.0.4
+
+* New function added for initial testing [#3](https://github.com/flaviomoc/divraster/issues/3).
+* Minor changes in function documentation.
+* Minor changes in function tests.
+* Citation updated.
+
 # divraster 1.0.3
 
 * Improvements in function descriptions.

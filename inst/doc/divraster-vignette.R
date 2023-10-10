@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
@@ -6,7 +6,7 @@ knitr::opts_chunk$set(
   message = FALSE
 )
 
-## ---- fig.height = 4, fig.width = 4, fig.align = 'center'---------------------
+## ----fig.height = 4, fig.width = 4, fig.align = 'center'----------------------
 # Loading data
 # Presence-absence SpatRaster
 bin1 <- terra::rast(system.file("extdata", 
@@ -48,18 +48,18 @@ terra::plot(alpha.td2, main = paste0(names(alpha.td2), "_sce2"))
 alpha.td2-alpha.td
 terra::plot(alpha.td2-alpha.td, main = "Delta Alpha TD")
 
-## ---- fig.height = 4, fig.width = 4, fig.align = 'center'---------------------
+## ----fig.height = 4, fig.width = 4, fig.align = 'center'----------------------
 alpha.fd <- divraster::spat.alpha(bin1, traits)
 alpha.fd
 terra::plot(alpha.fd, main = names(alpha.fd))
 
-## ---- fig.height = 4, fig.width = 4, fig.align = 'center'---------------------
+## ----fig.height = 4, fig.width = 4, fig.align = 'center'----------------------
 # Alpha PD calculation
 alpha.pd <- divraster::spat.alpha(bin1, tree)
 alpha.pd
 terra::plot(alpha.pd, main = names(alpha.pd))
 
-## ---- fig.height = 5, fig.width = 6, fig.align = 'center'---------------------
+## ----fig.height = 5, fig.width = 6, fig.align = 'center'----------------------
 # SES FD calculation
 ses.fd <- divraster::spat.rand(x = bin1, 
                                tree = traits, 
@@ -68,7 +68,7 @@ ses.fd <- divraster::spat.rand(x = bin1,
 ses.fd
 terra::plot(ses.fd, main = names(ses.fd))
 
-## ---- fig.height = 5, fig.width = 6, fig.align = 'center'---------------------
+## ----fig.height = 5, fig.width = 6, fig.align = 'center'----------------------
 # SES PD calculation
 ses.pd <- divraster::spat.rand(x = bin1, 
                                tree = tree, 
@@ -77,43 +77,43 @@ ses.pd <- divraster::spat.rand(x = bin1,
 ses.pd
 terra::plot(ses.pd, main = names(ses.pd))
 
-## ---- fig.height = 5, fig.width = 6, fig.align = 'center'---------------------
+## ----fig.height = 5, fig.width = 6, fig.align = 'center'----------------------
 # Beta spatial TD calculation
 beta.td <- divraster::spat.beta(bin1)
 beta.td
 terra::plot(beta.td, main = names(beta.td))
 
-## ---- fig.height = 5, fig.width = 6, fig.align = 'center'---------------------
+## ----fig.height = 5, fig.width = 6, fig.align = 'center'----------------------
 # Beta spatial FD calculation
 beta.fd <- divraster::spat.beta(bin1, traits)
 beta.fd
 terra::plot(beta.fd, main = names(beta.fd))
 
-## ---- fig.height = 5, fig.width = 6, fig.align = 'center'---------------------
+## ----fig.height = 5, fig.width = 6, fig.align = 'center'----------------------
 # Beta spatial PD calculation
 beta.pd <- divraster::spat.beta(bin1, tree)
 beta.pd
 terra::plot(beta.pd, main = names(beta.pd))
 
-## ---- fig.height = 5, fig.width = 6, fig.align = 'center'---------------------
+## ----fig.height = 5, fig.width = 6, fig.align = 'center'----------------------
 # Beta temporal TD calculation
 betatemp.td <- divraster::temp.beta(bin1, bin2)
 betatemp.td
 terra::plot(betatemp.td, main = names(betatemp.td))
 
-## ---- fig.height = 5, fig.width = 6, fig.align = 'center'---------------------
+## ----fig.height = 5, fig.width = 6, fig.align = 'center'----------------------
 # Beta temporal FD calculation
 betatemp.fd <- divraster::temp.beta(bin1, bin2, traits)
 betatemp.fd
 terra::plot(betatemp.fd, main = names(betatemp.fd))
 
-## ---- fig.height = 5, fig.width = 6, fig.align = 'center'---------------------
+## ----fig.height = 5, fig.width = 6, fig.align = 'center'----------------------
 # Beta temporal PD calculation
 betatemp.pd <- divraster::temp.beta(bin1, bin2, tree)
 betatemp.pd
 terra::plot(betatemp.pd, main = names(betatemp.pd))
 
-## ---- fig.height = 4, fig.width = 4, fig.align = 'center'---------------------
+## ----fig.height = 4, fig.width = 4, fig.align = 'center'----------------------
 # Average traits calculation
 # Scenario 1
 avg.traits1 <- divraster::spat.trait(bin1, traits)

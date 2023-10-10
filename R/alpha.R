@@ -30,8 +30,9 @@ spat.alpha.vec <- function(x, tree, resu, ...) {
 #'
 #' @param bin A SpatRaster with presence-absence data (0 or 1) for
 #' a set of species.
-#' @param tree It can be a data frame with species traits or a
-#' phylogenetic tree.
+#' @param tree It can be a 'data.frame' with species traits or a
+#' 'phylo' with a rooted phylogenetic tree. Species names in 'tree'
+#' and 'bin' must match!
 #' @param cores A positive integer. If cores > 1, a 'parallel'
 #' package cluster with that many cores is created and used.
 #' @param filename Character. Save results if a name is provided.
@@ -95,18 +96,10 @@ spat.alpha <- function(bin,
                        tree,
                        cores = 1,
                        filename = "", ...) {
-  # Check if 'bin' is a valid SpatRaster object
-  if (is.null(bin) || !inherits(bin, "SpatRaster")) {
-    stop("'bin' must be a SpatRaster.")
-  }
-  # Check if 'bin' has geographic coordinates
-  if (!terra::is.lonlat(bin)) {
-    stop("'bin' must have geographic coordinates.")
-  }
-  # Check if 'bin' has at least 2 layers
-  if (terra::nlyr(bin) < 2) {
-    stop("'bin' must have at least 2 layers.")
-  }
+
+  # Initial tests
+  inputs_chk(bin1 = bin, tree = tree)
+
   # Create numeric vector to store result
   resu <- numeric(1)
 
@@ -119,11 +112,6 @@ spat.alpha <- function(bin,
                       resu = resu,
                       cores = cores, ...)
   } else {
-    # Check if 'tree' object is valid (either a data.frame or
-    # a phylo object)
-    if (!inherits(tree, c("data.frame", "phylo"))) {
-      stop("'tree' must be a data.frame or a phylo object.")
-    }
     # Apply 'spat.alpha.vec' to 'bin' with the provided 'tree'
     res <- terra::app(bin,
                       spat.alpha.vec,

@@ -1,7 +1,6 @@
 .onAttach <- function(libname, pkgname) {
-packageStartupMessage("Thank you for using divraster!")
-packageStartupMessage("To acknowledge our work, please cite the package:")
-packageStartupMessage(paste0("Mota, F. M. M., Heming, N. M., and Alves-Ferreira, G. (2023). divraster: Diversity Metrics Calculations for Rasterized Data. R package version 1.0.2. https://cran.r-project.org/package=divraster"))
+packageStartupMessage("Welcome to divraster!")
+packageStartupMessage("To acknowledge our work use: citation('divraster')")
 }
 #' Load data adapted from Mota et al. (2022), Tobias et al. (2022),
 #'  and Jetz et al. (2014)
@@ -17,8 +16,10 @@ packageStartupMessage(paste0("Mota, F. M. M., Heming, N. M., and Alves-Ferreira,
 #' Conservation of Evolutionary Distinctness in Birds. -
 #' Current Biology 24: 919–930.
 #'
-#' @return List with climate scenarios, traits, and phylogenetic
-#' tree
+#' @return A list with binary maps of species for the reference
+#' and future climate scenarios, species traits, and a rooted
+#' phylogenetic tree for the species. The species names across
+#' these objects must match!
 #' @export
 #'
 #' @examples

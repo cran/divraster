@@ -20,8 +20,9 @@ spat.beta(
 \item{x}{A SpatRaster with presence-absence data (0 or 1) for a
 set of species.}
 
-\item{tree}{A data.frame with species traits or a phylogenetic
-tree.}
+\item{tree}{It can be a 'data.frame' with species traits or a
+'phylo' with a rooted phylogenetic tree. Species names in 'tree'
+and 'x' must match!}
 
 \item{filename}{Character. Save results if a name is provided.}
 
@@ -43,12 +44,12 @@ a calling function.}
 }
 \value{
 A SpatRaster with beta results (total, replacement,
-and richness differences).
+richness difference, and ratio).
 }
 \description{
 Calculates spatial beta diversity for
 taxonomic (TD), functional (FD), and phylogenetic (PD)
-dimensions. Adapted from \code{\link[BAT]{beta}}
+dimensions. Adapted from \code{\link[BAT]{beta}}.
 }
 \details{
 The TD beta diversity partitioning framework we used
@@ -84,4 +85,9 @@ Ecology and Biogeography 21: 760–771.
 Podani, J. and Schmera, D. 2011. A new conceptual
 and methodological framework for exploring and explaining
 pattern in presence - absence data. - Oikos 120: 1625–1638.
+
+Hidasi-Neto, J. et al. 2019. Climate change will
+drive mammal species loss and biotic homogenization in the
+Cerrado Biodiversity Hotspot. - Perspectives in Ecology and
+Conservation 17: 57–63.
 }

@@ -10,7 +10,8 @@ spat.trait(x, trait, cores = 1, filename = "", ...)
 \item{x}{A SpatRaster with presence-absence data (0 or 1) for a
 set of species.}
 
-\item{trait}{A data.frame with species traits.}
+\item{trait}{A 'data.frame' with species traits. Rownames must
+have species names that match with 'x'!}
 
 \item{cores}{A positive integer. If cores > 1, a 'parallel'
 package cluster with that many cores is created and used.}
@@ -27,10 +28,12 @@ SpatRaster with average traits.
 Compute average for each trait.
 }
 \examples{
+\donttest{
 library(terra)
 bin1 <- terra::rast(system.file("extdata", "ref.tif",
 package = "divraster"))
 traits <- read.csv(system.file("extdata", "traits.csv",
 package = "divraster"), row.names = 1)
 spat.trait(bin1, traits)
+}
 }

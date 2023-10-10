@@ -1,6 +1,6 @@
 Package: divraster
 Title: Diversity Metrics Calculations for Rasterized Data
-Version: 1.0.3
+Version: 1.0.4
 Authors@R: c(
     person("Flávio M. M.", "Mota", , "flaviomoc@gmail.com", role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0000-0002-0308-7151")),
@@ -22,10 +22,10 @@ Config/testthat/edition: 3
 Encoding: UTF-8
 RoxygenNote: 7.2.3
 NeedsCompilation: no
-Packaged: 2023-08-21 16:44:40 UTC; flavio
+Packaged: 2023-10-10 23:00:39 UTC; flavio
 Author: Flávio M. M. Mota [aut, cre, cph]
     (<https://orcid.org/0000-0002-0308-7151>),
   Neander Marcel Heming [aut] (<https://orcid.org/0000-0003-2461-5045>),
   Gabriela Alves-Ferreira [aut] (<https://orcid.org/0000-0001-5661-3381>)
 Repository: CRAN
-Date/Publication: 2023-08-21 19:00:02 UTC
+Date/Publication: 2023-10-10 23:30:02 UTC
