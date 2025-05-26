@@ -6,7 +6,7 @@ knitr::opts_chunk$set(
   message = FALSE
 )
 
-## ----fig.height = 4, fig.width = 4, fig.align = 'center'----------------------
+## -----------------------------------------------------------------------------
 # Loading data
 # Presence-absence SpatRaster
 bin1 <- terra::rast(system.file("extdata", 
@@ -18,7 +18,7 @@ bin2 <- terra::rast(system.file("extdata",
 
 # Change extension to process faster
 terra::ext(bin1)
-e <- c(-41, -39, -15, -13)
+e <- c(-40, -39, -14, -13)
 bin1 <- terra::crop(bin1, e)
 bin2 <- terra::crop(bin2, e)
 
@@ -35,98 +35,99 @@ tree <- ape::read.tree(system.file("extdata",
                                    package = "divraster"))
 
 # Alpha TD calculation for scenario 1
-alpha.td <- divraster::spat.alpha(bin1)
-alpha.td
-terra::plot(alpha.td, main = paste0(names(alpha.td), "_sce1"))
+divraster::spat.alpha(bin1)
 
 # Alpha TD calculation for scenario 2
-alpha.td2 <- divraster::spat.alpha(bin2)
-alpha.td2
-terra::plot(alpha.td2, main = paste0(names(alpha.td2), "_sce2"))
+divraster::spat.alpha(bin2)
 
-# Difference in Alpha TD between scenarios
-alpha.td2-alpha.td
-terra::plot(alpha.td2-alpha.td, main = "Delta Alpha TD")
+## ----eval = FALSE-------------------------------------------------------------
+# divraster::spat.alpha(bin1, traits)
 
-## ----fig.height = 4, fig.width = 4, fig.align = 'center'----------------------
-alpha.fd <- divraster::spat.alpha(bin1, traits)
-alpha.fd
-terra::plot(alpha.fd, main = names(alpha.fd))
-
-## ----fig.height = 4, fig.width = 4, fig.align = 'center'----------------------
+## -----------------------------------------------------------------------------
 # Alpha PD calculation
-alpha.pd <- divraster::spat.alpha(bin1, tree)
-alpha.pd
-terra::plot(alpha.pd, main = names(alpha.pd))
+divraster::spat.alpha(bin1, tree)
 
-## ----fig.height = 5, fig.width = 6, fig.align = 'center'----------------------
-# SES FD calculation
-ses.fd <- divraster::spat.rand(x = bin1, 
-                               tree = traits, 
-                               aleats = 3, 
-                               random = "site")
-ses.fd
-terra::plot(ses.fd, main = names(ses.fd))
+## ----eval = FALSE-------------------------------------------------------------
+# # SES FD calculation
+# divraster::spat.rand(x = bin1,
+#                      tree = traits,
+#                      aleats = 3,
+#                      random = "site")
 
-## ----fig.height = 5, fig.width = 6, fig.align = 'center'----------------------
-# SES PD calculation
-ses.pd <- divraster::spat.rand(x = bin1, 
-                               tree = tree, 
-                               aleats = 3, 
-                               random = "site")
-ses.pd
-terra::plot(ses.pd, main = names(ses.pd))
+## ----eval = FALSE-------------------------------------------------------------
+# # SES PD calculation
+# divraster::spat.rand(x = bin1,
+#                      tree = tree,
+#                      aleats = 3,
+#                      random = "site")
 
-## ----fig.height = 5, fig.width = 6, fig.align = 'center'----------------------
-# Beta spatial TD calculation
-beta.td <- divraster::spat.beta(bin1)
-beta.td
-terra::plot(beta.td, main = names(beta.td))
+## ----eval = FALSE-------------------------------------------------------------
+# # Beta spatial TD calculation
+# divraster::spat.beta(bin1)
 
-## ----fig.height = 5, fig.width = 6, fig.align = 'center'----------------------
-# Beta spatial FD calculation
-beta.fd <- divraster::spat.beta(bin1, traits)
-beta.fd
-terra::plot(beta.fd, main = names(beta.fd))
+## ----eval = FALSE-------------------------------------------------------------
+# # Beta spatial FD calculation
+# divraster::spat.beta(bin1, traits)
 
-## ----fig.height = 5, fig.width = 6, fig.align = 'center'----------------------
-# Beta spatial PD calculation
-beta.pd <- divraster::spat.beta(bin1, tree)
-beta.pd
-terra::plot(beta.pd, main = names(beta.pd))
+## ----eval = FALSE-------------------------------------------------------------
+# # Beta spatial PD calculation
+# divraster::spat.beta(bin1, tree)
 
-## ----fig.height = 5, fig.width = 6, fig.align = 'center'----------------------
+## -----------------------------------------------------------------------------
 # Beta temporal TD calculation
-betatemp.td <- divraster::temp.beta(bin1, bin2)
-betatemp.td
-terra::plot(betatemp.td, main = names(betatemp.td))
+divraster::temp.beta(bin1, bin2)
 
-## ----fig.height = 5, fig.width = 6, fig.align = 'center'----------------------
+## -----------------------------------------------------------------------------
 # Beta temporal FD calculation
-betatemp.fd <- divraster::temp.beta(bin1, bin2, traits)
-betatemp.fd
-terra::plot(betatemp.fd, main = names(betatemp.fd))
+divraster::temp.beta(bin1, bin2, traits)
 
-## ----fig.height = 5, fig.width = 6, fig.align = 'center'----------------------
+## -----------------------------------------------------------------------------
 # Beta temporal PD calculation
-betatemp.pd <- divraster::temp.beta(bin1, bin2, tree)
-betatemp.pd
-terra::plot(betatemp.pd, main = names(betatemp.pd))
+divraster::temp.beta(bin1, bin2, tree)
 
-## ----fig.height = 4, fig.width = 4, fig.align = 'center'----------------------
+## -----------------------------------------------------------------------------
 # Average traits calculation
 # Scenario 1
-avg.traits1 <- divraster::spat.trait(bin1, traits)
-avg.traits1[[4]]
-terra::plot(avg.traits1[[4]], main = paste0(names(avg.traits1[[4]]), "_sce1"))
+divraster::spat.trait(bin1, traits)
 
 # Scenario 2
-avg.traits2 <- divraster::spat.trait(bin2, traits)
-avg.traits2[[4]]
-terra::plot(avg.traits2[[4]], main = paste0(names(avg.traits2[[4]]), "_sce2"))
+divraster::spat.trait(bin2, traits)
 
-# Percentage of change
-change.traits <- (avg.traits2 - avg.traits1) / avg.traits1 * 100
-change.traits[[4]]
-terra::plot(change.traits[[4]], main = paste0(names(change.traits[[4]]), "_%"))
+## -----------------------------------------------------------------------------
+# Suitability change between climate scenarios
+change <- divraster::suit.change(bin1[[1:4]], bin2[[1:4]])
+
+# Visualization
+# Initialize an empty list to store color mappings for each layer
+change.col <- list()
+
+# Loop through each layer in the 'change' raster
+for(i in 1:terra::nlyr(change)){
+  # Get unique values, omitting NA values, and sort them
+  change.col[[i]] <- sort(na.omit(unique(terra::values(change[[i]]))))
+  
+  # Map numeric values to specific colors
+  change.col[[i]][change.col[[i]] == 1] <- "blue"   # Gain
+  change.col[[i]][change.col[[i]] == 2] <- "red"    # Loss
+  change.col[[i]][change.col[[i]] == 3] <- "grey"   # No change
+  change.col[[i]][change.col[[i]] == 4] <- "white"  # Unsuitable
+  
+  # Plot the change in suitability
+  terra::plot(change[[i]], col = change.col[[i]], 
+              main = names(change)[i],
+              cex.main = 1,          
+              font.main = 4)  
+}
+
+## -----------------------------------------------------------------------------
+# Climate suitable area scenario 1
+divraster::area.calc(bin1[[1:4]])
+
+# Climate suitable area scenario 2
+divraster::area.calc(bin2[[1:4]])
+
+## -----------------------------------------------------------------------------
+# Difference in species richness between climate scenarios
+divraster::differ.rast(divraster::spat.alpha2(bin1),
+                       divraster::spat.alpha2(bin2), perc = FALSE)
 

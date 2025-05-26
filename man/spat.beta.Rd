@@ -4,21 +4,11 @@
 \alias{spat.beta}
 \title{Spatial beta diversity for raster}
 \usage{
-spat.beta(
-  x,
-  tree,
-  filename = "",
-  global = FALSE,
-  fm = NULL,
-  d = mean(terra::res(terra::rast(x))) * 2,
-  type = "circle",
-  na.policy = "omit",
-  ...
-)
+spat.beta(x, tree, filename = "", func = "jaccard", abund = FALSE, ...)
 }
 \arguments{
 \item{x}{A SpatRaster with presence-absence data (0 or 1) for a
-set of species.}
+set of species. (This maps to \code{layers} in \code{BAT::raster.beta}).}
 
 \item{tree}{It can be a 'data.frame' with species traits or a
 'phylo' with a rooted phylogenetic tree. Species names in 'tree'
@@ -26,21 +16,15 @@ and 'x' must match!}
 
 \item{filename}{Character. Save results if a name is provided.}
 
-\item{global}{Logical. Mean of pairwise comparisons between
-focal cell and its neighbors (default) or mean of all pairwise
-comparisons.}
+\item{func}{Character. Distance function for beta diversity calculation.
+Defaults to "jaccard". Passed to \code{BAT::beta}.}
 
-\item{fm}{Numeric. Focal matrix ("moving window").}
+\item{abund}{Logical. Whether to use abundance data (TRUE) or presence-absence (FALSE).
+Defaults to FALSE. Passed to \code{BAT::beta}.}
 
-\item{d}{Window radius to compute beta diversity.}
-
-\item{type}{Character. Window format. Default = "circle".}
-
-\item{na.policy}{Character. Default = "omit".
-See ?terra::focal3D for details.}
-
-\item{...}{Additional arguments to be passed passed down from
-a calling function.}
+\item{...}{Additional arguments to be passed to internal functions
+within \code{BAT::raster.beta} (e.g., \code{BAT::beta}).
+Note: \code{BAT::raster.beta} does not accept a 'neighbour' argument.}
 }
 \value{
 A SpatRaster with beta results (total, replacement,
@@ -49,45 +33,19 @@ richness difference, and ratio).
 \description{
 Calculates spatial beta diversity for
 taxonomic (TD), functional (FD), and phylogenetic (PD)
-dimensions. Adapted from \code{\link[BAT]{beta}}.
-}
-\details{
-The TD beta diversity partitioning framework we used
-was developed by Podani and Schmera (2011) and Carvalho et al.
-(2012) and expanded to PD and FD by Cardoso et al. (2014).
+dimensions. See \code{\link[BAT]{raster.beta}}.
 }
 \examples{
 \donttest{
 library(terra)
-bin1 <- terra::rast(system.file("extdata", "ref.tif",
+bin1 <- terra::rast(system.file("extdata", "fut.tif",
 package = "divraster"))
 traits <- read.csv(system.file("extdata", "traits.csv",
 package = "divraster"), row.names = 1)
-rownames(traits) <- names(bin1)
 tree <- ape::read.tree(system.file("extdata", "tree.tre",
 package = "divraster"))
 spat.beta(bin1)
 spat.beta(bin1, traits)
 spat.beta(bin1, tree)
 }
-}
-\references{
-Cardoso, P. et al. 2014. Partitioning taxon,
-phylogenetic and functional beta diversity into replacement
-and richness difference components. - Journal of Biogeography
-41: 749–761.
-
-Carvalho, J. C. et al. 2012. Determining the
-relative roles of species replacement and species richness
-differences in generating beta-diversity patterns. - Global
-Ecology and Biogeography 21: 760–771.
-
-Podani, J. and Schmera, D. 2011. A new conceptual
-and methodological framework for exploring and explaining
-pattern in presence - absence data. - Oikos 120: 1625–1638.
-
-Hidasi-Neto, J. et al. 2019. Climate change will
-drive mammal species loss and biotic homogenization in the
-Cerrado Biodiversity Hotspot. - Perspectives in Ecology and
-Conservation 17: 57–63.
 }
