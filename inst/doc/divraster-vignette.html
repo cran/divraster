@@ -12,7 +12,7 @@
 
 <meta name="author" content="Flávio M. M. Mota, Neander M. Heming, and Gabriela Alves-Ferreira" />
 
-<meta name="date" content="2025-05-26" />
+<meta name="date" content="2026-01-11" />
 
 <title>divraster-vignette</title>
 
@@ -50,8 +50,9 @@ overflow: visible;
 }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -62,7 +63,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -341,7 +342,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">divraster-vignette</h1>
 <h4 class="author">Flávio M. M. Mota, Neander M. Heming, and Gabriela
 Alves-Ferreira</h4>
-<h4 class="date">2025-05-26</h4>
+<h4 class="date">2026-01-11</h4>
 
 
 
@@ -383,6 +384,9 @@ Alves-Ferreira</h4>
 <li><a href="#suit-change">6 Suitability change</a></li>
 <li><a href="#area-calc">7 Area calculation</a></li>
 <li><a href="#differ">8 Richness difference between scenarios</a></li>
+<li><a href="#occ-avg-dist">9 Occurrence distance helper</a></li>
+<li><a href="#rast-by-polys">10 Raster–polygon summaries</a></li>
+<li><a href="#bin2crop">11 Cropping by binary footprint</a></li>
 </ul>
 <div id="intro" class="section level2">
 <h2>1 Introduction</h2>
@@ -398,6 +402,10 @@ functions to calculate diversity metrics directly from rasters,
 eliminating the need for matrix transformations. This capability is
 especially valuable when dealing with extensive datasets, as matrices
 often impose memory constraints.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(divraster)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">library</span>(terra)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="fu">library</span>(sf)</span></code></pre></div>
 </div>
 <div id="alpha" class="section level2">
 <h2>2 Alpha calculations</h2>
@@ -420,84 +428,84 @@ since all taxa are at the same level.</p>
 </div>
 <div id="alpha-ex" class="section level2">
 <h2>2.1 Alpha examples</h2>
-</div>
-<div id="alpha-td" class="section level2">
-<h2>2.1.1 Alpha TD</h2>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># Loading data</span></span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="co"># Presence-absence SpatRaster</span></span>
-<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>bin1 <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">rast</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, </span>
-<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>                                <span class="st">&quot;ref_frugivor.tif&quot;</span>, </span>
-<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>                                <span class="at">package =</span> <span class="st">&quot;divraster&quot;</span>))</span>
-<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>bin2 <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">rast</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>,</span>
-<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>                                <span class="st">&quot;fut_frugivor.tif&quot;</span>,</span>
-<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>                                <span class="at">package =</span> <span class="st">&quot;divraster&quot;</span>))</span>
-<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a></span>
-<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="co"># Change extension to process faster</span></span>
-<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>terra<span class="sc">::</span><span class="fu">ext</span>(bin1)</span>
-<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="co">#&gt; SpatExtent : -41.875, -38.75, -21.375, -13 (xmin, xmax, ymin, ymax)</span></span>
-<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>e <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">40</span>, <span class="sc">-</span><span class="dv">39</span>, <span class="sc">-</span><span class="dv">14</span>, <span class="sc">-</span><span class="dv">13</span>)</span>
-<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a>bin1 <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">crop</span>(bin1, e)</span>
-<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a>bin2 <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">crop</span>(bin2, e)</span>
-<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a></span>
-<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a><span class="co"># Species traits</span></span>
-<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a>traits <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, </span>
-<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a>                               <span class="st">&quot;traits_frugivor.csv&quot;</span>, </span>
-<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a>                               <span class="at">package =</span> <span class="st">&quot;divraster&quot;</span>), </span>
-<span id="cb1-21"><a href="#cb1-21" tabindex="-1"></a>                   <span class="at">sep =</span> <span class="st">&quot;;&quot;</span>, </span>
-<span id="cb1-22"><a href="#cb1-22" tabindex="-1"></a>                   <span class="at">row.names =</span> <span class="dv">1</span>)</span>
-<span id="cb1-23"><a href="#cb1-23" tabindex="-1"></a></span>
-<span id="cb1-24"><a href="#cb1-24" tabindex="-1"></a><span class="co"># Phylogenetic tree</span></span>
-<span id="cb1-25"><a href="#cb1-25" tabindex="-1"></a>tree <span class="ot">&lt;-</span> ape<span class="sc">::</span><span class="fu">read.tree</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, </span>
-<span id="cb1-26"><a href="#cb1-26" tabindex="-1"></a>                                   <span class="st">&quot;tree_frugivor.tre&quot;</span>, </span>
-<span id="cb1-27"><a href="#cb1-27" tabindex="-1"></a>                                   <span class="at">package =</span> <span class="st">&quot;divraster&quot;</span>))</span>
-<span id="cb1-28"><a href="#cb1-28" tabindex="-1"></a></span>
-<span id="cb1-29"><a href="#cb1-29" tabindex="-1"></a><span class="co"># Alpha TD calculation for scenario 1</span></span>
-<span id="cb1-30"><a href="#cb1-30" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.alpha</span>(bin1)</span>
-<span id="cb1-31"><a href="#cb1-31" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
-<span id="cb1-32"><a href="#cb1-32" tabindex="-1"></a><span class="co">#&gt; dimensions  : 8, 8, 1  (nrow, ncol, nlyr)</span></span>
-<span id="cb1-33"><a href="#cb1-33" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.125, 0.125  (x, y)</span></span>
-<span id="cb1-34"><a href="#cb1-34" tabindex="-1"></a><span class="co">#&gt; extent      : -40, -39, -14, -13  (xmin, xmax, ymin, ymax)</span></span>
-<span id="cb1-35"><a href="#cb1-35" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 (EPSG:4326) </span></span>
-<span id="cb1-36"><a href="#cb1-36" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
-<span id="cb1-37"><a href="#cb1-37" tabindex="-1"></a><span class="co">#&gt; name        : Alpha_TD </span></span>
-<span id="cb1-38"><a href="#cb1-38" tabindex="-1"></a><span class="co">#&gt; min value   :        0 </span></span>
-<span id="cb1-39"><a href="#cb1-39" tabindex="-1"></a><span class="co">#&gt; max value   :       67</span></span>
-<span id="cb1-40"><a href="#cb1-40" tabindex="-1"></a></span>
-<span id="cb1-41"><a href="#cb1-41" tabindex="-1"></a><span class="co"># Alpha TD calculation for scenario 2</span></span>
-<span id="cb1-42"><a href="#cb1-42" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.alpha</span>(bin2)</span>
-<span id="cb1-43"><a href="#cb1-43" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
-<span id="cb1-44"><a href="#cb1-44" tabindex="-1"></a><span class="co">#&gt; dimensions  : 8, 8, 1  (nrow, ncol, nlyr)</span></span>
-<span id="cb1-45"><a href="#cb1-45" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.125, 0.125  (x, y)</span></span>
-<span id="cb1-46"><a href="#cb1-46" tabindex="-1"></a><span class="co">#&gt; extent      : -40, -39, -14, -13  (xmin, xmax, ymin, ymax)</span></span>
-<span id="cb1-47"><a href="#cb1-47" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 (EPSG:4326) </span></span>
-<span id="cb1-48"><a href="#cb1-48" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
-<span id="cb1-49"><a href="#cb1-49" tabindex="-1"></a><span class="co">#&gt; name        : Alpha_TD </span></span>
-<span id="cb1-50"><a href="#cb1-50" tabindex="-1"></a><span class="co">#&gt; min value   :        0 </span></span>
-<span id="cb1-51"><a href="#cb1-51" tabindex="-1"></a><span class="co">#&gt; max value   :       65</span></span></code></pre></div>
+<div id="alpha-td" class="section level3">
+<h3>2.1.1 Alpha TD</h3>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># Loading data</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co"># Presence-absence SpatRaster</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>bin1 <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">rast</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, </span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>                                <span class="st">&quot;ref_frugivor.tif&quot;</span>, </span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>                                <span class="at">package =</span> <span class="st">&quot;divraster&quot;</span>))</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>bin2 <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">rast</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>                                <span class="st">&quot;fut_frugivor.tif&quot;</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>                                <span class="at">package =</span> <span class="st">&quot;divraster&quot;</span>))</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co"># Change extension to process faster</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>terra<span class="sc">::</span><span class="fu">ext</span>(bin1)</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="co">#&gt; SpatExtent : -41.875, -38.75, -21.375, -13 (xmin, xmax, ymin, ymax)</span></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>e <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">40</span>, <span class="sc">-</span><span class="dv">39</span>, <span class="sc">-</span><span class="dv">14</span>, <span class="sc">-</span><span class="dv">13</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>bin1 <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">crop</span>(bin1, e)</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>bin2 <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">crop</span>(bin2, e)</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co"># Species traits</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>traits <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, </span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>                               <span class="st">&quot;traits_frugivor.csv&quot;</span>, </span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>                               <span class="at">package =</span> <span class="st">&quot;divraster&quot;</span>), </span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>                   <span class="at">sep =</span> <span class="st">&quot;;&quot;</span>, </span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>                   <span class="at">row.names =</span> <span class="dv">1</span>)</span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a><span class="co"># Phylogenetic tree</span></span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a>tree <span class="ot">&lt;-</span> ape<span class="sc">::</span><span class="fu">read.tree</span>(<span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, </span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a>                                   <span class="st">&quot;tree_frugivor.tre&quot;</span>, </span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a>                                   <span class="at">package =</span> <span class="st">&quot;divraster&quot;</span>))</span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a></span>
+<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a><span class="co"># Alpha TD calculation for scenario 1</span></span>
+<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.alpha</span>(bin1)</span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
+<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a><span class="co">#&gt; size        : 8, 8, 1  (nrow, ncol, nlyr)</span></span>
+<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.125, 0.125  (x, y)</span></span>
+<span id="cb2-34"><a href="#cb2-34" tabindex="-1"></a><span class="co">#&gt; extent      : -40, -39, -14, -13  (xmin, xmax, ymin, ymax)</span></span>
+<span id="cb2-35"><a href="#cb2-35" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 </span></span>
+<span id="cb2-36"><a href="#cb2-36" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
+<span id="cb2-37"><a href="#cb2-37" tabindex="-1"></a><span class="co">#&gt; name        : Alpha_TD </span></span>
+<span id="cb2-38"><a href="#cb2-38" tabindex="-1"></a><span class="co">#&gt; min value   :        0 </span></span>
+<span id="cb2-39"><a href="#cb2-39" tabindex="-1"></a><span class="co">#&gt; max value   :       67</span></span>
+<span id="cb2-40"><a href="#cb2-40" tabindex="-1"></a></span>
+<span id="cb2-41"><a href="#cb2-41" tabindex="-1"></a><span class="co"># Alpha TD calculation for scenario 2</span></span>
+<span id="cb2-42"><a href="#cb2-42" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.alpha</span>(bin2)</span>
+<span id="cb2-43"><a href="#cb2-43" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
+<span id="cb2-44"><a href="#cb2-44" tabindex="-1"></a><span class="co">#&gt; size        : 8, 8, 1  (nrow, ncol, nlyr)</span></span>
+<span id="cb2-45"><a href="#cb2-45" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.125, 0.125  (x, y)</span></span>
+<span id="cb2-46"><a href="#cb2-46" tabindex="-1"></a><span class="co">#&gt; extent      : -40, -39, -14, -13  (xmin, xmax, ymin, ymax)</span></span>
+<span id="cb2-47"><a href="#cb2-47" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 </span></span>
+<span id="cb2-48"><a href="#cb2-48" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
+<span id="cb2-49"><a href="#cb2-49" tabindex="-1"></a><span class="co">#&gt; name        : Alpha_TD </span></span>
+<span id="cb2-50"><a href="#cb2-50" tabindex="-1"></a><span class="co">#&gt; min value   :        0 </span></span>
+<span id="cb2-51"><a href="#cb2-51" tabindex="-1"></a><span class="co">#&gt; max value   :       65</span></span></code></pre></div>
 <p>The alpha taxonomic diversity in the first scenario ranges from 0 to
 67, and in the second scenario, it ranges from 0 to 65, with higher
 values concentrated towards the north in both cases.</p>
 </div>
+</div>
 <div id="alpha-fd" class="section level2">
 <h2>2.1.2 Alpha FD</h2>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.alpha</span>(bin1, traits)</span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.alpha</span>(bin1, traits)</span></code></pre></div>
 <p>The alpha functional diversity for the first scenario ranges from
 4.248408 to 4.378846, with higher values concentrated towards the north,
 indicating greater functional diversity.</p>
 </div>
 <div id="alpha-pd" class="section level2">
 <h2>2.1.3 Alpha PD</h2>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># Alpha PD calculation</span></span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.alpha</span>(bin1, tree)</span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; dimensions  : 8, 8, 1  (nrow, ncol, nlyr)</span></span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.125, 0.125  (x, y)</span></span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt; extent      : -40, -39, -14, -13  (xmin, xmax, ymin, ymax)</span></span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 (EPSG:4326) </span></span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; name        : Alpha_PD </span></span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; min value   : 1793.342 </span></span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; max value   : 1859.668</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># Alpha PD calculation</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.alpha</span>(bin1, tree)</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt; size        : 8, 8, 1  (nrow, ncol, nlyr)</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.125, 0.125  (x, y)</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; extent      : -40, -39, -14, -13  (xmin, xmax, ymin, ymax)</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 </span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt; name        : Alpha_PD </span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt; min value   : 1793.342 </span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt; max value   : 1859.668</span></span></code></pre></div>
 <p>The alpha phylogenetic diversity for the first scenario ranges from
 1793.342 to 1859.668, with higher values concentrated towards the north,
 indicating greater phylogenetic diversity.</p>
@@ -522,11 +530,11 @@ a negative SES indicates the opposite.</p>
 </div>
 <div id="ses-fd" class="section level2">
 <h2>3.1.1 SES FD</h2>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># SES FD calculation</span></span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.rand</span>(<span class="at">x =</span> bin1, </span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>                     <span class="at">tree =</span> traits, </span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>                     <span class="at">aleats =</span> <span class="dv">3</span>, </span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>                     <span class="at">random =</span> <span class="st">&quot;site&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># SES FD calculation</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.rand</span>(<span class="at">x =</span> bin1, </span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>                     <span class="at">tree =</span> traits, </span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>                     <span class="at">aleats =</span> <span class="dv">3</span>, </span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>                     <span class="at">random =</span> <span class="st">&quot;site&quot;</span>)</span></code></pre></div>
 <p>The SES indicates that the majority of the areas have values close to
 0, suggesting that functional diversity does not significantly differ
 from the expected change. However, one community is projected to be
@@ -534,11 +542,11 @@ functionally clustered (SES_FD = -25).</p>
 </div>
 <div id="ses-pd" class="section level2">
 <h2>3.1.2 SES PD</h2>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># SES PD calculation</span></span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.rand</span>(<span class="at">x =</span> bin1, </span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>                     <span class="at">tree =</span> tree, </span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>                     <span class="at">aleats =</span> <span class="dv">3</span>, </span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>                     <span class="at">random =</span> <span class="st">&quot;site&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># SES PD calculation</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.rand</span>(<span class="at">x =</span> bin1, </span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>                     <span class="at">tree =</span> tree, </span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>                     <span class="at">aleats =</span> <span class="dv">3</span>, </span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>                     <span class="at">random =</span> <span class="st">&quot;site&quot;</span>)</span></code></pre></div>
 <p>In contrast, the SES for phylogenetic diversity does not differ from
 what is expected by chance, with most communities presenting values
 close to 0. However, one community is projected to be phylogenetically
@@ -572,8 +580,8 @@ communities.</p>
 </div>
 <div id="betaspat-td" class="section level2">
 <h2>4.1.1 Beta spatial TD</h2>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># Beta spatial TD calculation</span></span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.beta</span>(bin1)</span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co"># Beta spatial TD calculation</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.beta</span>(bin1)</span></code></pre></div>
 <p>Spatial beta diversity for TD indicates a slight change in species
 composition towards the south, as evidenced by the small values of
 Btotal (ranging from 0.002985075 to 0.045232793). The predominant
@@ -584,8 +592,8 @@ species.</p>
 </div>
 <div id="betaspat-fd" class="section level2">
 <h2>4.1.2 Beta spatial FD</h2>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co"># Beta spatial FD calculation</span></span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.beta</span>(bin1, traits)</span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># Beta spatial FD calculation</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.beta</span>(bin1, traits)</span></code></pre></div>
 <p>Similarly, spatial beta diversity for FD indicates a slight change in
 functional traits composition towards the south, as evidenced by the
 small values of Btotal (ranging from 0.0001674408 to 0.0235750070). The
@@ -596,8 +604,8 @@ or gain of functional traits.</p>
 </div>
 <div id="betaspat-pd" class="section level2">
 <h2>4.1.3 Beta spatial PD</h2>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># Beta spatial PD calculation</span></span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.beta</span>(bin1, tree)</span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># Beta spatial PD calculation</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.beta</span>(bin1, tree)</span></code></pre></div>
 <p>The spatial beta diversity for PD also indicates a slight change in
 the evolutionary history of communities towards the south, as evidenced
 by the small values of Btotal (ranging from 0.0008262028 to
@@ -608,17 +616,17 @@ are due to the loss or gain of evolutionary history.</p>
 </div>
 <div id="betatemp-td" class="section level2">
 <h2>4.1.4 Beta temporal TD</h2>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># Beta temporal TD calculation</span></span>
-<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">temp.beta</span>(bin1, bin2)</span>
-<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
-<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co">#&gt; dimensions  : 8, 8, 4  (nrow, ncol, nlyr)</span></span>
-<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.125, 0.125  (x, y)</span></span>
-<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co">#&gt; extent      : -40, -39, -14, -13  (xmin, xmax, ymin, ymax)</span></span>
-<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 (EPSG:4326) </span></span>
-<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
-<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt; names       :  Btotal_TD,   Brepl_TD,   Brich_TD, Bratio_TD </span></span>
-<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="co">#&gt; min values  : 0.02985075, 0.00000000, 0.02985075, 0.0000000 </span></span>
-<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="co">#&gt; max values  : 0.13636364, 0.06153846, 0.13636364, 0.5714286</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># Beta temporal TD calculation</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">temp.beta</span>(bin1, bin2)</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="co">#&gt; size        : 8, 8, 4  (nrow, ncol, nlyr)</span></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.125, 0.125  (x, y)</span></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co">#&gt; extent      : -40, -39, -14, -13  (xmin, xmax, ymin, ymax)</span></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 </span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="co">#&gt; names       :  Btotal_TD,   Brepl_TD,   Brich_TD, Bratio_TD </span></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co">#&gt; min values  : 0.02985075, 0.00000000, 0.02985075, 0.0000000 </span></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="co">#&gt; max values  : 0.13636364, 0.06153846, 0.13636364, 0.5714286</span></span></code></pre></div>
 <p>The temporal beta diversity for TD indicates that future communities
 in the north are expected to experience changes in their species
 composition. This is driven by the Brich component, suggesting these
@@ -626,17 +634,17 @@ dissimilarities are attributed to gains or losses of species.</p>
 </div>
 <div id="betatemp-fd" class="section level2">
 <h2>4.1.5 Beta temporal FD</h2>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># Beta temporal FD calculation</span></span>
-<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">temp.beta</span>(bin1, bin2, traits)</span>
-<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
-<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="co">#&gt; dimensions  : 8, 8, 4  (nrow, ncol, nlyr)</span></span>
-<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.125, 0.125  (x, y)</span></span>
-<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co">#&gt; extent      : -40, -39, -14, -13  (xmin, xmax, ymin, ymax)</span></span>
-<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 (EPSG:4326) </span></span>
-<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
-<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="co">#&gt; names       :  Btotal_FD,   Brepl_FD,    Brich_FD, Bratio_FD </span></span>
-<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co">#&gt; min values  : 0.01358064, 0.00000000, 0.007364383, 0.0000000 </span></span>
-<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="co">#&gt; max values  : 0.07041225, 0.02160415, 0.070412255, 0.7457799</span></span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># Beta temporal FD calculation</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">temp.beta</span>(bin1, bin2, traits)</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co">#&gt; size        : 8, 8, 4  (nrow, ncol, nlyr)</span></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.125, 0.125  (x, y)</span></span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#&gt; extent      : -40, -39, -14, -13  (xmin, xmax, ymin, ymax)</span></span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 </span></span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="co">#&gt; names       :  Btotal_FD,   Brepl_FD,    Brich_FD, Bratio_FD </span></span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co">#&gt; min values  : 0.01358064, 0.00000000, 0.007364383, 0.0000000 </span></span>
+<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a><span class="co">#&gt; max values  : 0.07041225, 0.02160415, 0.070412255, 0.7457799</span></span></code></pre></div>
 <p>The temporal beta diversity for FD indicates a less pronounced
 pattern compared to TD, with smaller values of Btotal. The Brich
 component is also predominant, suggesting that the small dissimilarities
@@ -644,17 +652,17 @@ can be attributed to gains or losses of functional traits.</p>
 </div>
 <div id="betatemp-pd" class="section level2">
 <h2>4.1.6 Beta temporal PD</h2>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># Beta temporal PD calculation</span></span>
-<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">temp.beta</span>(bin1, bin2, tree)</span>
-<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
-<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co">#&gt; dimensions  : 8, 8, 4  (nrow, ncol, nlyr)</span></span>
-<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.125, 0.125  (x, y)</span></span>
-<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a><span class="co">#&gt; extent      : -40, -39, -14, -13  (xmin, xmax, ymin, ymax)</span></span>
-<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 (EPSG:4326) </span></span>
-<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
-<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="co">#&gt; names       :  Btotal_PD,  Brepl_PD,   Brich_PD, Bratio_PD </span></span>
-<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co">#&gt; min values  : 0.01202170, 0.0000000, 0.01202170, 0.0000000 </span></span>
-<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a><span class="co">#&gt; max values  : 0.08652411, 0.0394096, 0.08652411, 0.6232362</span></span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="co"># Beta temporal PD calculation</span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">temp.beta</span>(bin1, bin2, tree)</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a><span class="co">#&gt; size        : 8, 8, 4  (nrow, ncol, nlyr)</span></span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.125, 0.125  (x, y)</span></span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a><span class="co">#&gt; extent      : -40, -39, -14, -13  (xmin, xmax, ymin, ymax)</span></span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 </span></span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a><span class="co">#&gt; names       :  Btotal_PD,  Brepl_PD,   Brich_PD, Bratio_PD </span></span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a><span class="co">#&gt; min values  : 0.01202170, 0.0000000, 0.01202170, 0.0000000 </span></span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a><span class="co">#&gt; max values  : 0.08652411, 0.0394096, 0.08652411, 0.6232362</span></span></code></pre></div>
 <p>Likewise, the temporal beta diversity for PD indicates a less
 pronounced pattern compared to TD, with smaller values of Btotal. The
 Brich component is also predominant, suggesting that the small
@@ -677,30 +685,30 @@ species.</p>
 </div>
 <div id="traits-ex" class="section level2">
 <h2>5.1 Traits average examples</h2>
-<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="co"># Average traits calculation</span></span>
-<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="co"># Scenario 1</span></span>
-<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.trait</span>(bin1, traits)</span>
-<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
-<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a><span class="co">#&gt; dimensions  : 8, 8, 12  (nrow, ncol, nlyr)</span></span>
-<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.125, 0.125  (x, y)</span></span>
-<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a><span class="co">#&gt; extent      : -40, -39, -14, -13  (xmin, xmax, ymin, ymax)</span></span>
-<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 (EPSG:4326) </span></span>
-<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
-<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a><span class="co">#&gt; names       : Beak.~ulmen, Beak.~Nares, Beak.Width, Beak.Depth, Tarsu~ength, Wing.Length, ... </span></span>
-<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a><span class="co">#&gt; min values  :    23.95758,    15.97879,   7.613636,   9.250000,    25.55224,    117.9833, ... </span></span>
-<span id="cb12-12"><a href="#cb12-12" tabindex="-1"></a><span class="co">#&gt; max values  :    24.36250,    16.28333,   7.804545,   9.601515,    25.89531,    120.3712, ...</span></span>
-<span id="cb12-13"><a href="#cb12-13" tabindex="-1"></a></span>
-<span id="cb12-14"><a href="#cb12-14" tabindex="-1"></a><span class="co"># Scenario 2</span></span>
-<span id="cb12-15"><a href="#cb12-15" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.trait</span>(bin2, traits)</span>
-<span id="cb12-16"><a href="#cb12-16" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
-<span id="cb12-17"><a href="#cb12-17" tabindex="-1"></a><span class="co">#&gt; dimensions  : 8, 8, 12  (nrow, ncol, nlyr)</span></span>
-<span id="cb12-18"><a href="#cb12-18" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.125, 0.125  (x, y)</span></span>
-<span id="cb12-19"><a href="#cb12-19" tabindex="-1"></a><span class="co">#&gt; extent      : -40, -39, -14, -13  (xmin, xmax, ymin, ymax)</span></span>
-<span id="cb12-20"><a href="#cb12-20" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 (EPSG:4326) </span></span>
-<span id="cb12-21"><a href="#cb12-21" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
-<span id="cb12-22"><a href="#cb12-22" tabindex="-1"></a><span class="co">#&gt; names       : Beak.~ulmen, Beak.~Nares, Beak.Width, Beak.Depth, Tarsu~ength, Wing.Length, ... </span></span>
-<span id="cb12-23"><a href="#cb12-23" tabindex="-1"></a><span class="co">#&gt; min values  :    23.22833,    15.01000,   7.336667,   8.918333,    25.65077,    118.2877, ... </span></span>
-<span id="cb12-24"><a href="#cb12-24" tabindex="-1"></a><span class="co">#&gt; max values  :    25.15000,    16.84655,   7.905172,   9.598276,    26.57241,    122.3655, ...</span></span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="co"># Average traits calculation</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="co"># Scenario 1</span></span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.trait</span>(bin1, traits)</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a><span class="co">#&gt; size        : 8, 8, 12  (nrow, ncol, nlyr)</span></span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.125, 0.125  (x, y)</span></span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a><span class="co">#&gt; extent      : -40, -39, -14, -13  (xmin, xmax, ymin, ymax)</span></span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 </span></span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a><span class="co">#&gt; names       : Beak.~ulmen, Beak.~Nares, Beak.Width, Beak.Depth, Tarsu~ength, Wing.Length, ... </span></span>
+<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a><span class="co">#&gt; min values  :    23.95758,    15.97879,   7.613636,   9.250000,    25.55224,    117.9833, ... </span></span>
+<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a><span class="co">#&gt; max values  :    24.36250,    16.28333,   7.804545,   9.601515,    25.89531,    120.3712, ...</span></span>
+<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a></span>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a><span class="co"># Scenario 2</span></span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">spat.trait</span>(bin2, traits)</span>
+<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
+<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a><span class="co">#&gt; size        : 8, 8, 12  (nrow, ncol, nlyr)</span></span>
+<span id="cb13-18"><a href="#cb13-18" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.125, 0.125  (x, y)</span></span>
+<span id="cb13-19"><a href="#cb13-19" tabindex="-1"></a><span class="co">#&gt; extent      : -40, -39, -14, -13  (xmin, xmax, ymin, ymax)</span></span>
+<span id="cb13-20"><a href="#cb13-20" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 </span></span>
+<span id="cb13-21"><a href="#cb13-21" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
+<span id="cb13-22"><a href="#cb13-22" tabindex="-1"></a><span class="co">#&gt; names       : Beak.~ulmen, Beak.~Nares, Beak.Width, Beak.Depth, Tarsu~ength, Wing.Length, ... </span></span>
+<span id="cb13-23"><a href="#cb13-23" tabindex="-1"></a><span class="co">#&gt; min values  :    23.22833,    15.01000,   7.336667,   8.918333,    25.65077,    118.2877, ... </span></span>
+<span id="cb13-24"><a href="#cb13-24" tabindex="-1"></a><span class="co">#&gt; max values  :    25.15000,    16.84655,   7.905172,   9.598276,    26.57241,    122.3655, ...</span></span></code></pre></div>
 <p>The average beak depth in the first scenario ranges from 9.25 to 9.6,
 while in the second scenario, it ranges from 8.9 to 9.6. The reduction
 in beak size can be attributed to the decline of species with larger
@@ -708,31 +716,31 @@ beak depths.</p>
 </div>
 <div id="suit-change" class="section level2">
 <h2>6 Suitability change</h2>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="co"># Suitability change between climate scenarios</span></span>
-<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>change <span class="ot">&lt;-</span> divraster<span class="sc">::</span><span class="fu">suit.change</span>(bin1[[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]], bin2[[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]])</span>
-<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a></span>
-<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a><span class="co"># Visualization</span></span>
-<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a><span class="co"># Initialize an empty list to store color mappings for each layer</span></span>
-<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>change.col <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
-<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a></span>
-<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a><span class="co"># Loop through each layer in the &#39;change&#39; raster</span></span>
-<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>terra<span class="sc">::</span><span class="fu">nlyr</span>(change)){</span>
-<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a>  <span class="co"># Get unique values, omitting NA values, and sort them</span></span>
-<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a>  change.col[[i]] <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">na.omit</span>(<span class="fu">unique</span>(terra<span class="sc">::</span><span class="fu">values</span>(change[[i]]))))</span>
-<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a>  </span>
-<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a>  <span class="co"># Map numeric values to specific colors</span></span>
-<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a>  change.col[[i]][change.col[[i]] <span class="sc">==</span> <span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="st">&quot;blue&quot;</span>   <span class="co"># Gain</span></span>
-<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a>  change.col[[i]][change.col[[i]] <span class="sc">==</span> <span class="dv">2</span>] <span class="ot">&lt;-</span> <span class="st">&quot;red&quot;</span>    <span class="co"># Loss</span></span>
-<span id="cb13-16"><a href="#cb13-16" tabindex="-1"></a>  change.col[[i]][change.col[[i]] <span class="sc">==</span> <span class="dv">3</span>] <span class="ot">&lt;-</span> <span class="st">&quot;grey&quot;</span>   <span class="co"># No change</span></span>
-<span id="cb13-17"><a href="#cb13-17" tabindex="-1"></a>  change.col[[i]][change.col[[i]] <span class="sc">==</span> <span class="dv">4</span>] <span class="ot">&lt;-</span> <span class="st">&quot;white&quot;</span>  <span class="co"># Unsuitable</span></span>
-<span id="cb13-18"><a href="#cb13-18" tabindex="-1"></a>  </span>
-<span id="cb13-19"><a href="#cb13-19" tabindex="-1"></a>  <span class="co"># Plot the change in suitability</span></span>
-<span id="cb13-20"><a href="#cb13-20" tabindex="-1"></a>  terra<span class="sc">::</span><span class="fu">plot</span>(change[[i]], <span class="at">col =</span> change.col[[i]], </span>
-<span id="cb13-21"><a href="#cb13-21" tabindex="-1"></a>              <span class="at">main =</span> <span class="fu">names</span>(change)[i],</span>
-<span id="cb13-22"><a href="#cb13-22" tabindex="-1"></a>              <span class="at">cex.main =</span> <span class="dv">1</span>,          </span>
-<span id="cb13-23"><a href="#cb13-23" tabindex="-1"></a>              <span class="at">font.main =</span> <span class="dv">4</span>)  </span>
-<span id="cb13-24"><a href="#cb13-24" tabindex="-1"></a>}</span></code></pre></div>
-<p><img role="img" src="data:image/png;base64,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" /><!-- --><img role="img" src="data:image/png;base64,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" /><!-- --><img role="img" src="data:image/png;base64,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" /><!-- --><img role="img" src="data:image/png;base64,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" /><!-- -->
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="co"># Suitability change between climate scenarios</span></span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>change <span class="ot">&lt;-</span> divraster<span class="sc">::</span><span class="fu">suit.change</span>(bin1[[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]], bin2[[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]])</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="co"># Visualization</span></span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a><span class="co"># Initialize an empty list to store color mappings for each layer</span></span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>change.col <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a></span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a><span class="co"># Loop through each layer in the &#39;change&#39; raster</span></span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>terra<span class="sc">::</span><span class="fu">nlyr</span>(change)){</span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a>  <span class="co"># Get unique values, omitting NA values, and sort them</span></span>
+<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a>  change.col[[i]] <span class="ot">&lt;-</span> <span class="fu">sort</span>(<span class="fu">na.omit</span>(<span class="fu">unique</span>(terra<span class="sc">::</span><span class="fu">values</span>(change[[i]]))))</span>
+<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a>  </span>
+<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a>  <span class="co"># Map numeric values to specific colors</span></span>
+<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a>  change.col[[i]][change.col[[i]] <span class="sc">==</span> <span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="st">&quot;blue&quot;</span>   <span class="co"># Gain</span></span>
+<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a>  change.col[[i]][change.col[[i]] <span class="sc">==</span> <span class="dv">2</span>] <span class="ot">&lt;-</span> <span class="st">&quot;red&quot;</span>    <span class="co"># Loss</span></span>
+<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a>  change.col[[i]][change.col[[i]] <span class="sc">==</span> <span class="dv">3</span>] <span class="ot">&lt;-</span> <span class="st">&quot;grey&quot;</span>   <span class="co"># No change</span></span>
+<span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a>  change.col[[i]][change.col[[i]] <span class="sc">==</span> <span class="dv">4</span>] <span class="ot">&lt;-</span> <span class="st">&quot;white&quot;</span>  <span class="co"># Unsuitable</span></span>
+<span id="cb14-18"><a href="#cb14-18" tabindex="-1"></a>  </span>
+<span id="cb14-19"><a href="#cb14-19" tabindex="-1"></a>  <span class="co"># Plot the change in suitability</span></span>
+<span id="cb14-20"><a href="#cb14-20" tabindex="-1"></a>  terra<span class="sc">::</span><span class="fu">plot</span>(change[[i]], <span class="at">col =</span> change.col[[i]], </span>
+<span id="cb14-21"><a href="#cb14-21" tabindex="-1"></a>              <span class="at">main =</span> <span class="fu">names</span>(change)[i],</span>
+<span id="cb14-22"><a href="#cb14-22" tabindex="-1"></a>              <span class="at">cex.main =</span> <span class="dv">1</span>,          </span>
+<span id="cb14-23"><a href="#cb14-23" tabindex="-1"></a>              <span class="at">font.main =</span> <span class="dv">4</span>)  </span>
+<span id="cb14-24"><a href="#cb14-24" tabindex="-1"></a>}</span></code></pre></div>
+<p><img role="img" src="data:image/png;base64,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" /><!-- --><img role="img" src="data:image/png;base64,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" /><!-- --><img role="img" src="data:image/png;base64,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" /><!-- --><img role="img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASAAAAEgCAMAAAAjXV6yAAAAw1BMVEUAAAAAADoAAGYAOjoAOmYAOpAAZrY6AAA6ADo6AGY6OgA6Ojo6OmY6OpA6ZpA6ZrY6kLY6kNtmAABmADpmAGZmOgBmOjpmOpBmZgBmZjpmZmZmkNtmtrZmtttmtv+QOgCQOjqQOmaQZjqQkGaQtpCQttuQ27aQ29uQ2/+2ZgC2Zjq2kDq2kGa225C22/+2//++vr7bkDrbkGbbtmbbtpDb27bb29vb/7bb/9vb////tmb/trb/25D/27b//7b//9v///9kV4PGAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAJcUlEQVR4nO2da3vTRhSExxSsAoViF0qvDtDSRqFNUKGXuI7t//+ruhfZli+KjiR0zvTJvh+MsprVjI5WK1uJBdaJW4F1AHZgHYAdWAdgB9YB2IF1AHZgHYAdWAdgB9YB2IF1AHZgHYAdWAdgB9YB2IF1AHZgHYAdWAdgB9YB2IF1AHZgHYAdWAdgB9YB2IF1AHZgHYAdWAdgB9YB2IF1AHZgHYAdWAdgB9YB2IF1AHZgHYAdWAdgB9YB2IF1AHZgHYAdWAdgB9YB2IF1AHZgHYAdWAdgB9YB2IF1AHZgHYAdWAdgB7esW06BmUaI1dnoXMOnC7hlXQFgohFiOb13tV7/e9myW+sOXUD9Khf7G4wVMkQ+PLgeuEMnUL+qwKRACFHg2RvM4uvqtwyj7+PqC4zOV28Qzo8/MuCLy9j+IcNe+Js3bix+6VpqOrstnzmF61PZije7eeHW5+48X2RuZXhZXTjJ0+tV7LBr33qoFciP+3nYUTdFPMKDf8pXIJ55+eixW7g/jXuWh2Z/puR4jP1z089ljvF6dbqza/5hGgTbrUTLv33r6JGrYeE7zf14jpLxMnbYtm899ArkvReZ32Vn7koQXwt/3HO3FH5cZBhf+yrOgR/XN1PXxe3t6O36ohp17nZ59W705Lqmsz8UYZ7ebWVjdu/S/ViuXYeh5Mt1EarqFnbtWw+1AoWJczn1AWKZwqvb/XHc40UW9si1zcOhH4eajp3MX/mKaoFc0+jp5bq286ZIe1sJ7mGwbc6k3bWuCEPGKXbtG49PTm2BCkS2extey5HsMocfizjoJ67Zvx/Iy731pai+P/AzSxw3pzqHsRqLtN1KWBfKWK4NP/otf/zu8SOUHSrtGw+1Am12Jh7DmHsWmss9z+PpNAsHMDaHI+7by5FX4ePXrtQ1ncNCEc+r3VZmZYHC2jweJyd5gWd/3UzLDrv2rYdagcpzJA5mv7fx1Z8lfvKYhXEd2vzZ4JrdrJBvZ4t59Vi+yx5c+j2b1XT2C2W1NlvZnNpu1z+gXPshi1PN+epd8Ikdyvath1aBNkNgHiaA7RTkG+LFIvwYBvc8Tizl+Rjf8xXVi9gi21ybTnf2C37AjndbiWblRS9Uw1/NQqfyJA0djtpDRJUCbSZZHz5UINbBt7i3Js/KsmxnETe+X7ir9tv1ySnoxo19hBn0ZOdyQvKb2W0lmLkhcf+nUP8MT/+cllONa3KFCB127TsPnQLxUOh82qkFpu4Ccp3Py7XgZOsco5+zfmd0OSsA/T6oH10PtcGpxtWr80XmpspP/770/wdONS6fX61eX/l/lNMQglONq7Nw3i9fphFUMwctPvfv9nhv8ykC6wDswDoAO2hUvPeAFpMCbT7K794IDZ6jK7AxWH51LpERACOD+cGtp8FzdAUkBkKZPrAzmFd/QzB4jq7AziAVqMEgFaiNgVCmD0gMhDJ9QGIglOkDEgOhTB9Ul2s+fywe9rivhUZFG5k+OLWMfU3e594xGhVtZPrg1DL2JPPP0gg6WK42rlevf08FOliuNq6LSZqDDperjcuX16lAh8vVxnyWrmJHy5XG8t5f99/OolHRRqYPqsvpfdAxEGhSgQgMhDJ9QGIglOkDEgOhTB+QGAhl+oDEQCjTByQGQpk+IDEQyvQBiYFQpg9IDIQyfWBvEP/8ZegcXQGJgVCmD0gMhDJ9QGIglOkDEgOhTB+QGAhl+oDEQCjTByQGQpk+IDEQyvQBiYFQpg9IDIQyfUBiIJTpAxIDoUwfkBgIZfqAxEAo0wckBkKZPiAxEMr0AYmBUKYPSAyEMn1AYiCU6QMSA6FMH9gZrF6dS2TGwMQgfWe1yWCRTdIIut2gGP2aCnSrwf4DaAfP0RWQGAhl+sDSoPJ4nMFzdAUkBkKZPiAxEMr0gY3B0TPMBs/RFZgYHD/DbPAcXYGJwd4zzNLfBx1z/AyzwXN0BTYGR88wGzxHV0BiIJTpAxIDoUwfkBgIZfrAxCDdD2oySM8wazJIzzBraSCU6QM7g/QEqgaDVKAGg1SgNgZCmT4gMRDK9AGJgVCmD0gMhDJ9QGIglOkDEgOhTB+QGAhl+oDEQCjTByQGQpk+IDEQyvQBiYFQpg9IDIQyfUBiIJTpAxIDoUwfkBgIZfqAxEAo0wckBkKZPiAxEMr0gb1B+vOXTyjTByQGQpk+IDEQyvQBiYFQpg9IDIQyfUBiIJTpAxIDoUwfkBgIZfqAxEAo0wckBkKZPiAxEMr0AYmBUKYPSAyEMn1AYiCU6QMSA6FMH5AYCGX6gMRAKNMHJAZCmT4gMRDK9AGJgVCmD2wMFtnol2n61nOtwer1lf++T/rOap3B8vmV/8ZzejRFnUE5gtL35msN5khzUDsDoUwfWBqkOUhuIJTpAxIDoUwf2Bikx+PcbpAej9NgkB6P02CQHo/TZJAej9PWQCjTByQGQpk+IDEQyvSBiUF6PE6TQXo8TpNBejxOSwOhTB/YGaSHmzQYpAI1GKQCtTEQyvQBiYFQpg9IDIQyfUBiIJTpAxIDoUwfkBgIZfqAxEAo0wckBkKZPiAxEMr0AYmBUKYPSAyEMn1gZ5D+f7F6g3TLtckg/Q91jQbpf6hrMkj/Q10rA6FMH5AYCGX6wN4g/vkLLSYFOr7MN/C+x9p+qxs69wcnW49+s9rAnSvQ0W9WG7h7BWrJnSzQ3u/FGkgFurugdk0qUADWAdiBdQB2YB2AHVgHYAfWAdiBdQB20Kt3Dsw2r44CaPHe4KCz6z7pZz8I6NPZvVVaPr9yn9vi/evFk+vyazAdOscb4X3shwE9+7uE/sCHg+8L1CpqtfN69erbtiPoYAuDgH7dCze6/SE8CwkX2ahNffY7F5P2u7m/hUFA3w3kMzcJjMLBD1FbTQeVzm74dRkHlS0MA7p2zMsJOe5VPisXZZ/gTnX2tzDl+3liC8OAPp19NfKZe1089Ddn/V22XLyPB53X7WeS4y0MAHr1zsNBD9dZ/wXXvO1lvtq522V+Qn2ZvwvAOgA7sA7ADqwDsAPrAOzAOgA7sA7ADqwDsAPrAOzAOgA7sA7ADqwDsAPrAOzAOgA7sA7ADqwDsAPrAOzAOgA7sA7ADqwDsAPrAOzAOgA7sA7ADqwDsAPrAOzAOgA7sA7ADqwDsAPrAOzAOgA7sA7ADqwDsAPrAOzAOgA7sA7ADqwDsAPrAOzAOgA7sA7ADqwDsAPrAOzAOgA7sA7ADqwDsPMfUnk9AOxoBGsAAAAASUVORK5CYII=" /><!-- -->
 Suitability change between climate scenarios with values equals 1
 representing gain, values equals 2 representing loss, values equals 3
 representing no change, and values equals 4 representing unsuitable in
@@ -740,21 +748,21 @@ both scenarios.</p>
 </div>
 <div id="area-calc" class="section level2">
 <h2>7 Area calculation</h2>
-<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="co"># Climate suitable area scenario 1</span></span>
-<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">area.calc</span>(bin1[[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]])</span>
-<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a><span class="co">#&gt;                   Layer     Area</span></span>
-<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="co">#&gt; 1      Amazona_farinosa 7686.712</span></span>
-<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a><span class="co">#&gt; 2  Amazona_rhodocorytha 7686.712</span></span>
-<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a><span class="co">#&gt; 3       Amazona_vinacea 3749.616</span></span>
-<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="co">#&gt; 4 Arremon_semitorquatus    0.000</span></span>
-<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a></span>
-<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a><span class="co"># Climate suitable area scenario 2</span></span>
-<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">area.calc</span>(bin2[[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]])</span>
-<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a><span class="co">#&gt;                   Layer     Area</span></span>
-<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a><span class="co">#&gt; 1      Amazona_farinosa 7686.712</span></span>
-<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a><span class="co">#&gt; 2  Amazona_rhodocorytha 7686.712</span></span>
-<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a><span class="co">#&gt; 3       Amazona_vinacea    0.000</span></span>
-<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a><span class="co">#&gt; 4 Arremon_semitorquatus    0.000</span></span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="co"># Climate suitable area scenario 1</span></span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">area.calc</span>(bin1[[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]])</span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a><span class="co">#&gt;                   Layer     Area</span></span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="co">#&gt; 1      Amazona_farinosa 7686.712</span></span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a><span class="co">#&gt; 2  Amazona_rhodocorytha 7686.712</span></span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a><span class="co">#&gt; 3       Amazona_vinacea 3749.616</span></span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a><span class="co">#&gt; 4 Arremon_semitorquatus    0.000</span></span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a></span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a><span class="co"># Climate suitable area scenario 2</span></span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">area.calc</span>(bin2[[<span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>]])</span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a><span class="co">#&gt;                   Layer     Area</span></span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a><span class="co">#&gt; 1      Amazona_farinosa 7686.712</span></span>
+<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a><span class="co">#&gt; 2  Amazona_rhodocorytha 7686.712</span></span>
+<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a><span class="co">#&gt; 3       Amazona_vinacea    0.000</span></span>
+<span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a><span class="co">#&gt; 4 Arremon_semitorquatus    0.000</span></span></code></pre></div>
 <p>The climate suitable area for species such as <em>Amazona
 farinosa</em> is expected to remain the same (7,686 km<span class="math inline">\(^2\)</span>), while for species such as
 <em>Amazona vinacea</em> climate suitability is expected to be
@@ -762,20 +770,133 @@ eliminated (a 100% reduction).</p>
 </div>
 <div id="differ" class="section level2">
 <h2>8 Richness difference between scenarios</h2>
-<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="co"># Difference in species richness between climate scenarios</span></span>
-<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">differ.rast</span>(divraster<span class="sc">::</span><span class="fu">spat.alpha2</span>(bin1),</span>
-<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a>                       divraster<span class="sc">::</span><span class="fu">spat.alpha2</span>(bin2), <span class="at">perc =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
-<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a><span class="co">#&gt; dimensions  : 8, 8, 1  (nrow, ncol, nlyr)</span></span>
-<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.125, 0.125  (x, y)</span></span>
-<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a><span class="co">#&gt; extent      : -40, -39, -14, -13  (xmin, xmax, ymin, ymax)</span></span>
-<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 (EPSG:4326) </span></span>
-<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
-<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a><span class="co">#&gt; name        : Absolute_Difference </span></span>
-<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a><span class="co">#&gt; min value   :                  -9 </span></span>
-<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a><span class="co">#&gt; max value   :                  -2</span></span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="co"># Difference in species richness between climate scenarios</span></span>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a>divraster<span class="sc">::</span><span class="fu">differ.rast</span>(divraster<span class="sc">::</span><span class="fu">spat.alpha2</span>(bin1),</span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a>                       divraster<span class="sc">::</span><span class="fu">spat.alpha2</span>(bin2), <span class="at">perc =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
+<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a><span class="co">#&gt; size        : 8, 8, 1  (nrow, ncol, nlyr)</span></span>
+<span id="cb16-6"><a href="#cb16-6" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.125, 0.125  (x, y)</span></span>
+<span id="cb16-7"><a href="#cb16-7" tabindex="-1"></a><span class="co">#&gt; extent      : -40, -39, -14, -13  (xmin, xmax, ymin, ymax)</span></span>
+<span id="cb16-8"><a href="#cb16-8" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 </span></span>
+<span id="cb16-9"><a href="#cb16-9" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
+<span id="cb16-10"><a href="#cb16-10" tabindex="-1"></a><span class="co">#&gt; name        : Absolute_Difference </span></span>
+<span id="cb16-11"><a href="#cb16-11" tabindex="-1"></a><span class="co">#&gt; min value   :                  -9 </span></span>
+<span id="cb16-12"><a href="#cb16-12" tabindex="-1"></a><span class="co">#&gt; max value   :                  -2</span></span></code></pre></div>
 <p>When comparing the two scenarios, subtracting the second from the
 first reveals greater species losses (n = 9) in the north.</p>
+</div>
+<div id="occ-avg-dist" class="section level2">
+<h2>9 Occurrence distance helper</h2>
+<p>The function <code>occ.avg.dist()</code> calculates the average
+pairwise great‑circle distance between occurrence points for each
+species.</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a></span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>occurrences <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a><span class="at">species =</span> <span class="fu">c</span>(</span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a><span class="fu">rep</span>(<span class="st">&quot;Species_A&quot;</span>, <span class="dv">3</span>),</span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a><span class="fu">rep</span>(<span class="st">&quot;Species_B&quot;</span>, <span class="dv">4</span>),</span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a><span class="st">&quot;Species_C&quot;</span></span>
+<span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a>),</span>
+<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a><span class="at">lon =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">40</span>, <span class="sc">-</span><span class="dv">41</span>, <span class="sc">-</span><span class="dv">42</span>, <span class="sc">-</span><span class="dv">43</span>, <span class="sc">-</span><span class="dv">44</span>, <span class="sc">-</span><span class="dv">45</span>, <span class="sc">-</span><span class="dv">46</span>, <span class="sc">-</span><span class="dv">47</span>),</span>
+<span id="cb17-10"><a href="#cb17-10" tabindex="-1"></a><span class="at">lat =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">20</span>, <span class="sc">-</span><span class="dv">21</span>, <span class="sc">-</span><span class="dv">22</span>, <span class="sc">-</span><span class="dv">23</span>, <span class="sc">-</span><span class="dv">24</span>, <span class="sc">-</span><span class="dv">25</span>, <span class="sc">-</span><span class="dv">26</span>, <span class="sc">-</span><span class="dv">27</span>)</span>
+<span id="cb17-11"><a href="#cb17-11" tabindex="-1"></a>)</span>
+<span id="cb17-12"><a href="#cb17-12" tabindex="-1"></a></span>
+<span id="cb17-13"><a href="#cb17-13" tabindex="-1"></a>avg_dist <span class="ot">&lt;-</span> <span class="fu">occ.avg.dist</span>(occurrences)</span>
+<span id="cb17-14"><a href="#cb17-14" tabindex="-1"></a>avg_dist</span>
+<span id="cb17-15"><a href="#cb17-15" tabindex="-1"></a><span class="co">#&gt;     species avg_distance_m</span></span>
+<span id="cb17-16"><a href="#cb17-16" tabindex="-1"></a><span class="co">#&gt; 1 Species_A       202821.5</span></span>
+<span id="cb17-17"><a href="#cb17-17" tabindex="-1"></a><span class="co">#&gt; 2 Species_B       250551.7</span></span>
+<span id="cb17-18"><a href="#cb17-18" tabindex="-1"></a><span class="co">#&gt; 3 Species_C             NA</span></span></code></pre></div>
+<p>Species with only one record (e.g. <code>Species_C</code>) return
+<code>NA</code> for the average distance because pairwise distances
+cannot be computed.</p>
+</div>
+<div id="rast-by-polys" class="section level2">
+<h2>10 Raster–polygon summaries</h2>
+<p>The function <code>rast.by.polys()</code> summarises raster values by
+polygons using a user‑defined function.</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a><span class="co"># Continuous raster (e.g. environmental suitability)</span></span>
+<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a>r_env <span class="ot">&lt;-</span> <span class="fu">rast</span>(</span>
+<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a><span class="at">ncol =</span> <span class="dv">50</span>, <span class="at">nrow =</span> <span class="dv">50</span>,</span>
+<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a><span class="at">xmin =</span> <span class="dv">0</span>, <span class="at">xmax =</span> <span class="dv">10</span>,</span>
+<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a><span class="at">ymin =</span> <span class="dv">0</span>, <span class="at">ymax =</span> <span class="dv">10</span>)</span>
+<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a><span class="fu">values</span>(r_env) <span class="ot">&lt;-</span> <span class="fu">runif</span>(<span class="fu">ncell</span>(r_env), <span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a><span class="fu">names</span>(r_env) <span class="ot">&lt;-</span> <span class="st">&quot;suitability&quot;</span></span>
+<span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a></span>
+<span id="cb18-9"><a href="#cb18-9" tabindex="-1"></a><span class="co"># Two polygons with IDs</span></span>
+<span id="cb18-10"><a href="#cb18-10" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> <span class="fu">vect</span>(<span class="st">&quot;POLYGON ((0 0, 5 0, 5 10, 0 10, 0 0))&quot;</span>, <span class="at">crs =</span> <span class="st">&quot;EPSG:4326&quot;</span>)</span>
+<span id="cb18-11"><a href="#cb18-11" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> <span class="fu">vect</span>(<span class="st">&quot;POLYGON ((5 0, 10 0, 10 10, 5 10, 5 0))&quot;</span>, <span class="at">crs =</span> <span class="st">&quot;EPSG:4326&quot;</span>)</span>
+<span id="cb18-12"><a href="#cb18-12" tabindex="-1"></a>polys <span class="ot">&lt;-</span> <span class="fu">rbind</span>(p1, p2)</span>
+<span id="cb18-13"><a href="#cb18-13" tabindex="-1"></a>polys<span class="sc">$</span>poly_id <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;P1&quot;</span>, <span class="st">&quot;P2&quot;</span>)</span>
+<span id="cb18-14"><a href="#cb18-14" tabindex="-1"></a></span>
+<span id="cb18-15"><a href="#cb18-15" tabindex="-1"></a><span class="co"># Mean suitability per polygon</span></span>
+<span id="cb18-16"><a href="#cb18-16" tabindex="-1"></a>poly_mean <span class="ot">&lt;-</span> <span class="fu">rast.by.polys</span>(</span>
+<span id="cb18-17"><a href="#cb18-17" tabindex="-1"></a><span class="at">x =</span> r_env,</span>
+<span id="cb18-18"><a href="#cb18-18" tabindex="-1"></a><span class="at">polygons =</span> polys,</span>
+<span id="cb18-19"><a href="#cb18-19" tabindex="-1"></a><span class="at">id_col =</span> <span class="st">&quot;poly_id&quot;</span></span>
+<span id="cb18-20"><a href="#cb18-20" tabindex="-1"></a>)</span>
+<span id="cb18-21"><a href="#cb18-21" tabindex="-1"></a>poly_mean</span>
+<span id="cb18-22"><a href="#cb18-22" tabindex="-1"></a><span class="co">#&gt;   poly_id suitability</span></span>
+<span id="cb18-23"><a href="#cb18-23" tabindex="-1"></a><span class="co">#&gt; 1      P1   0.4964579</span></span>
+<span id="cb18-24"><a href="#cb18-24" tabindex="-1"></a><span class="co">#&gt; 2      P2   0.4907004</span></span></code></pre></div>
+<p>It is also possible to compute multiple statistics by supplying a
+custom function.</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a>poly_stats <span class="ot">&lt;-</span> <span class="fu">rast.by.polys</span>(</span>
+<span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a><span class="at">x =</span> r_env,</span>
+<span id="cb19-3"><a href="#cb19-3" tabindex="-1"></a><span class="at">polygons =</span> polys,</span>
+<span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a><span class="at">id_col =</span> <span class="st">&quot;poly_id&quot;</span>,</span>
+<span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a><span class="at">fun =</span> <span class="cf">function</span>(v, ...) <span class="fu">c</span>(</span>
+<span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a><span class="at">mean =</span> <span class="fu">mean</span>(v, ...),</span>
+<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a><span class="at">min =</span> <span class="fu">min</span>(v, ...),</span>
+<span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a><span class="at">max =</span> <span class="fu">max</span>(v, ...)</span>
+<span id="cb19-9"><a href="#cb19-9" tabindex="-1"></a>),</span>
+<span id="cb19-10"><a href="#cb19-10" tabindex="-1"></a><span class="at">na.rm =</span> <span class="cn">TRUE</span></span>
+<span id="cb19-11"><a href="#cb19-11" tabindex="-1"></a>)</span>
+<span id="cb19-12"><a href="#cb19-12" tabindex="-1"></a>poly_stats</span>
+<span id="cb19-13"><a href="#cb19-13" tabindex="-1"></a><span class="co">#&gt;   poly_id suitability suitability.1 suitability.2</span></span>
+<span id="cb19-14"><a href="#cb19-14" tabindex="-1"></a><span class="co">#&gt; 1      P1   0.4964579  0.0010268190     0.9984705</span></span>
+<span id="cb19-15"><a href="#cb19-15" tabindex="-1"></a><span class="co">#&gt; 2      P2   0.4907004  0.0006052661     0.9999306</span></span></code></pre></div>
+</div>
+<div id="bin2crop" class="section level2">
+<h2>11 Cropping by binary footprint</h2>
+<p>The function <code>bin2crop()</code> crops a continuous raster
+according to a binary footprint (0/1).</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a><span class="co">#Continuous raster</span></span>
+<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a>r_cont <span class="ot">&lt;-</span> <span class="fu">rast</span>(</span>
+<span id="cb20-3"><a href="#cb20-3" tabindex="-1"></a><span class="at">ncol =</span> <span class="dv">50</span>, <span class="at">nrow =</span> <span class="dv">50</span>,</span>
+<span id="cb20-4"><a href="#cb20-4" tabindex="-1"></a><span class="at">xmin =</span> <span class="dv">0</span>, <span class="at">xmax =</span> <span class="dv">10</span>,</span>
+<span id="cb20-5"><a href="#cb20-5" tabindex="-1"></a><span class="at">ymin =</span> <span class="dv">0</span>, <span class="at">ymax =</span> <span class="dv">10</span>)</span>
+<span id="cb20-6"><a href="#cb20-6" tabindex="-1"></a><span class="fu">values</span>(r_cont) <span class="ot">&lt;-</span> <span class="fu">runif</span>(<span class="fu">ncell</span>(r_cont), <span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb20-7"><a href="#cb20-7" tabindex="-1"></a><span class="fu">names</span>(r_cont) <span class="ot">&lt;-</span> <span class="st">&quot;suitability&quot;</span></span>
+<span id="cb20-8"><a href="#cb20-8" tabindex="-1"></a></span>
+<span id="cb20-9"><a href="#cb20-9" tabindex="-1"></a><span class="co">#Binary footprint (circle around centre)</span></span>
+<span id="cb20-10"><a href="#cb20-10" tabindex="-1"></a>r_bin <span class="ot">&lt;-</span> <span class="fu">rast</span>(r_cont)</span>
+<span id="cb20-11"><a href="#cb20-11" tabindex="-1"></a>xy <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">xyFromCell</span>(r_bin, <span class="dv">1</span><span class="sc">:</span><span class="fu">ncell</span>(r_bin))</span>
+<span id="cb20-12"><a href="#cb20-12" tabindex="-1"></a>dist_center <span class="ot">&lt;-</span> <span class="fu">sqrt</span>((xy[, <span class="dv">1</span>] <span class="sc">-</span> <span class="dv">5</span>)<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> (xy[, <span class="dv">2</span>] <span class="sc">-</span> <span class="dv">5</span>)<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb20-13"><a href="#cb20-13" tabindex="-1"></a><span class="fu">values</span>(r_bin) <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(dist_center <span class="sc">&lt;=</span> <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb20-14"><a href="#cb20-14" tabindex="-1"></a><span class="fu">names</span>(r_bin) <span class="ot">&lt;-</span> <span class="st">&quot;footprint&quot;</span></span>
+<span id="cb20-15"><a href="#cb20-15" tabindex="-1"></a></span>
+<span id="cb20-16"><a href="#cb20-16" tabindex="-1"></a><span class="co">#Crop continuous raster to footprint</span></span>
+<span id="cb20-17"><a href="#cb20-17" tabindex="-1"></a>r_cropped <span class="ot">&lt;-</span> <span class="fu">bin2crop</span>(<span class="at">r_bin =</span> r_bin, <span class="at">r_cont =</span> r_cont)</span>
+<span id="cb20-18"><a href="#cb20-18" tabindex="-1"></a></span>
+<span id="cb20-19"><a href="#cb20-19" tabindex="-1"></a>r_cropped</span>
+<span id="cb20-20"><a href="#cb20-20" tabindex="-1"></a><span class="co">#&gt; class       : SpatRaster </span></span>
+<span id="cb20-21"><a href="#cb20-21" tabindex="-1"></a><span class="co">#&gt; size        : 30, 30, 1  (nrow, ncol, nlyr)</span></span>
+<span id="cb20-22"><a href="#cb20-22" tabindex="-1"></a><span class="co">#&gt; resolution  : 0.2, 0.2  (x, y)</span></span>
+<span id="cb20-23"><a href="#cb20-23" tabindex="-1"></a><span class="co">#&gt; extent      : 2, 8, 2, 8  (xmin, xmax, ymin, ymax)</span></span>
+<span id="cb20-24"><a href="#cb20-24" tabindex="-1"></a><span class="co">#&gt; coord. ref. : lon/lat WGS 84 (CRS84) (OGC:CRS84) </span></span>
+<span id="cb20-25"><a href="#cb20-25" tabindex="-1"></a><span class="co">#&gt; source(s)   : memory</span></span>
+<span id="cb20-26"><a href="#cb20-26" tabindex="-1"></a><span class="co">#&gt; name        : suitability </span></span>
+<span id="cb20-27"><a href="#cb20-27" tabindex="-1"></a><span class="co">#&gt; min value   : 0.001161998 </span></span>
+<span id="cb20-28"><a href="#cb20-28" tabindex="-1"></a><span class="co">#&gt; max value   : 0.999194679</span></span>
+<span id="cb20-29"><a href="#cb20-29" tabindex="-1"></a></span>
+<span id="cb20-30"><a href="#cb20-30" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">3</span>))</span>
+<span id="cb20-31"><a href="#cb20-31" tabindex="-1"></a><span class="fu">plot</span>(r_cont, <span class="at">main =</span> <span class="st">&quot;Original raster&quot;</span>)</span>
+<span id="cb20-32"><a href="#cb20-32" tabindex="-1"></a><span class="fu">plot</span>(r_bin, <span class="at">main =</span> <span class="st">&quot;Binary footprint&quot;</span>)</span>
+<span id="cb20-33"><a href="#cb20-33" tabindex="-1"></a><span class="fu">plot</span>(r_cropped, <span class="at">main =</span> <span class="st">&quot;Cropped raster&quot;</span>)</span></code></pre></div>
+<p><img role="img" src="data:image/png;base64,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" /><!-- --></p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>))</span></code></pre></div>
 </div>
 
 

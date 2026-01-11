@@ -7,6 +7,12 @@ knitr::opts_chunk$set(
 )
 
 ## -----------------------------------------------------------------------------
+library(divraster)
+library(terra)
+library(dplyr)
+library(sf)
+
+## -----------------------------------------------------------------------------
 # Loading data
 # Presence-absence SpatRaster
 bin1 <- terra::rast(system.file("extdata", 
@@ -130,4 +136,84 @@ divraster::area.calc(bin2[[1:4]])
 # Difference in species richness between climate scenarios
 divraster::differ.rast(divraster::spat.alpha2(bin1),
                        divraster::spat.alpha2(bin2), perc = FALSE)
+
+## -----------------------------------------------------------------------------
+set.seed(1)
+
+occurrences <- data.frame(
+species = c(
+rep("Species_A", 3),
+rep("Species_B", 4),
+"Species_C"
+),
+lon = c(-40, -41, -42, -43, -44, -45, -46, -47),
+lat = c(-20, -21, -22, -23, -24, -25, -26, -27)
+)
+
+avg_dist <- occ.avg.dist(occurrences)
+avg_dist
+
+## -----------------------------------------------------------------------------
+# Continuous raster (e.g. environmental suitability)
+r_env <- rast(
+ncol = 50, nrow = 50,
+xmin = 0, xmax = 10,
+ymin = 0, ymax = 10)
+values(r_env) <- runif(ncell(r_env), 0, 1)
+names(r_env) <- "suitability"
+
+# Two polygons with IDs
+p1 <- vect("POLYGON ((0 0, 5 0, 5 10, 0 10, 0 0))", crs = "EPSG:4326")
+p2 <- vect("POLYGON ((5 0, 10 0, 10 10, 5 10, 5 0))", crs = "EPSG:4326")
+polys <- rbind(p1, p2)
+polys$poly_id <- c("P1", "P2")
+
+# Mean suitability per polygon
+poly_mean <- rast.by.polys(
+x = r_env,
+polygons = polys,
+id_col = "poly_id"
+)
+poly_mean
+
+## -----------------------------------------------------------------------------
+poly_stats <- rast.by.polys(
+x = r_env,
+polygons = polys,
+id_col = "poly_id",
+fun = function(v, ...) c(
+mean = mean(v, ...),
+min = min(v, ...),
+max = max(v, ...)
+),
+na.rm = TRUE
+)
+poly_stats
+
+## -----------------------------------------------------------------------------
+#Continuous raster
+r_cont <- rast(
+ncol = 50, nrow = 50,
+xmin = 0, xmax = 10,
+ymin = 0, ymax = 10)
+values(r_cont) <- runif(ncell(r_cont), 0, 1)
+names(r_cont) <- "suitability"
+
+#Binary footprint (circle around centre)
+r_bin <- rast(r_cont)
+xy <- terra::xyFromCell(r_bin, 1:ncell(r_bin))
+dist_center <- sqrt((xy[, 1] - 5)^2 + (xy[, 2] - 5)^2)
+values(r_bin) <- ifelse(dist_center <= 3, 1, 0)
+names(r_bin) <- "footprint"
+
+#Crop continuous raster to footprint
+r_cropped <- bin2crop(r_bin = r_bin, r_cont = r_cont)
+
+r_cropped
+
+par(mfrow = c(1, 3))
+plot(r_cont, main = "Original raster")
+plot(r_bin, main = "Binary footprint")
+plot(r_cropped, main = "Cropped raster")
+par(mfrow = c(1, 1))
 
